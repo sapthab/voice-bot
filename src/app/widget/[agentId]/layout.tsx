@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { Space_Grotesk } from "next/font/google"
-import { Toaster } from "@/components/ui/toaster"
-import "./globals.css"
+import "@/app/globals.css"
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -10,21 +9,19 @@ const spaceGrotesk = Space_Grotesk({
 })
 
 export const metadata: Metadata = {
-  title: "VoiceBot AI - AI Receptionist for Your Business",
-  description:
-    "Train an AI agent on your website content to handle customer inquiries 24/7. No code required.",
+  title: "Chat Widget",
+  description: "VoiceBot AI Chat Widget",
 }
 
-export default function RootLayout({
+export default function WidgetLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
     <html lang="en">
       <body className={`${spaceGrotesk.variable} antialiased`}>
         {children}
-        <Toaster />
       </body>
     </html>
   )

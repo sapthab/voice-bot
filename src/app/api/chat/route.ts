@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { generateChatResponse } from "@/lib/ai/chat-handler"
+import { generateStreamingChatResponse } from "@/lib/ai/stream-handler"
+import { checkEscalation } from "@/lib/ai/escalation"
 
 export async function POST(request: NextRequest) {
   try {
     const { agentId, conversationId, visitorId, message } = await request.json()
+    const stream = request.nextUrl.searchParams.get("stream") === "true"
 
     if (!agentId || !message) {
       return NextResponse.json(
@@ -32,12 +35,12 @@ export async function POST(request: NextRequest) {
     let currentVisitorId = visitorId || crypto.randomUUID()
 
     if (!currentConversationId) {
-      // Create new conversation
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: newConversation, error: convError } = await (supabase.from("conversations") as any)
         .insert({
           agent_id: agentId,
           visitor_id: currentVisitorId,
+          channel: "chat",
         })
         .select()
         .single()
@@ -52,7 +55,6 @@ export async function POST(request: NextRequest) {
 
       currentConversationId = newConversation.id
 
-      // Track analytics event
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase.from("analytics_events") as any).insert({
         agent_id: agentId,
@@ -77,7 +79,41 @@ export async function POST(request: NextRequest) {
       .eq("conversation_id", currentConversationId)
       .order("created_at", { ascending: true })
 
-    // Generate AI response
+    // Check for escalation triggers on user message
+    const agentData = agent as { vertical: string }
+    const escalation = checkEscalation(message, agentData.vertical as import("@/types/database").Vertical)
+    if (escalation.shouldEscalate) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("conversations") as any)
+        .update({
+          escalated: true,
+          escalation_reason: escalation.reason,
+        })
+        .eq("id", currentConversationId)
+    }
+
+    // Streaming mode
+    if (stream) {
+      const responseStream = await generateStreamingChatResponse(
+        agent,
+        history || [],
+        message,
+        currentConversationId,
+        currentVisitorId
+      )
+
+      return new Response(responseStream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+          "X-Conversation-Id": currentConversationId,
+          "X-Visitor-Id": currentVisitorId,
+        },
+      })
+    }
+
+    // Non-streaming mode
     const response = await generateChatResponse(agent, history || [], message)
 
     // Save assistant message
@@ -97,7 +133,7 @@ export async function POST(request: NextRequest) {
       conversation_id: currentConversationId,
     })
 
-    // Increment chat credits used for organization
+    // Increment chat credits
     const orgResult = await supabase
       .from("agents")
       .select("organization_id")

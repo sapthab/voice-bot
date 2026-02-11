@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
+import { generateEmbedding } from "@/lib/ai/embeddings"
 
 export async function POST(
   request: NextRequest,
@@ -18,12 +19,16 @@ export async function POST(
 
     const supabase = await createAdminClient()
 
+    // Generate embedding for the FAQ (combine question + answer for better matching)
+    const embedding = await generateEmbedding(`${question} ${answer}`)
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.from("faqs") as any)
       .insert({
         agent_id: agentId,
         question,
         answer,
+        embedding,
       })
       .select()
       .single()

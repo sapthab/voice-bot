@@ -17,6 +17,7 @@ import Link from "next/link"
 import { AgentSettings } from "@/components/dashboard/AgentSettings"
 import { AgentTraining } from "@/components/dashboard/AgentTraining"
 import { FAQEditor } from "@/components/dashboard/FAQEditor"
+import { VoiceSettings } from "@/components/dashboard/VoiceSettings"
 import { Agent, TrainingSource, FAQ } from "@/types/database"
 
 interface AgentPageProps {
@@ -163,6 +164,7 @@ export default async function AgentPage({ params }: AgentPageProps) {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="training">Training</TabsTrigger>
           <TabsTrigger value="faqs">FAQs</TabsTrigger>
+          <TabsTrigger value="voice">Voice</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -224,6 +226,10 @@ export default async function AgentPage({ params }: AgentPageProps) {
 
         <TabsContent value="faqs">
           <FAQEditor agentId={agentId} faqs={faqs} />
+        </TabsContent>
+
+        <TabsContent value="voice">
+          <VoiceSettings agent={agent} />
         </TabsContent>
 
         <TabsContent value="settings">

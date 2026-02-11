@@ -11,6 +11,7 @@ import {
   Settings,
   Home,
   PlusCircle,
+  Phone,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -18,6 +19,7 @@ const navigation = [
   { name: "Overview", href: "/dashboard", icon: Home },
   { name: "Agents", href: "/agents", icon: Bot },
   { name: "Conversations", href: "/conversations", icon: MessageSquare },
+  { name: "Voice Calls", href: "/conversations?channel=voice", icon: Phone },
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Billing", href: "/billing", icon: CreditCard },
   { name: "Settings", href: "/settings", icon: Settings },

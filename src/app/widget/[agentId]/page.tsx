@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, use } from "react"
+import { useEffect, useState, useRef, use, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -10,7 +10,8 @@ import {
   MessageCircle,
   Loader2,
   User,
-  Bot
+  Bot,
+  Star,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -18,6 +19,7 @@ interface Message {
   id: string
   role: "user" | "assistant"
   content: string
+  isStreaming?: boolean
 }
 
 interface Agent {
@@ -54,6 +56,10 @@ export default function WidgetPage({ params }: WidgetPageProps) {
   const [showLeadCapture, setShowLeadCapture] = useState(false)
   const [leadData, setLeadData] = useState<Record<string, string>>({})
   const [leadSubmitted, setLeadSubmitted] = useState(false)
+  const [showRating, setShowRating] = useState(false)
+  const [rating, setRating] = useState(0)
+  const [ratingHover, setRatingHover] = useState(0)
+  const [ratingSubmitted, setRatingSubmitted] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Initialize visitor ID
@@ -65,7 +71,6 @@ export default function WidgetPage({ params }: WidgetPageProps) {
     }
     setVisitorId(storedVisitorId)
 
-    // Check if lead already submitted
     const leadKey = localStorage.getItem(`voicebot_lead_${agentId}`)
     if (leadKey) {
       setLeadSubmitted(true)
@@ -118,8 +123,15 @@ export default function WidgetPage({ params }: WidgetPageProps) {
     setInput("")
     setLoading(true)
 
+    // Create streaming placeholder
+    const assistantMessageId = crypto.randomUUID()
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantMessageId, role: "assistant", content: "", isStreaming: true },
+    ])
+
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/chat?stream=true", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -130,19 +142,86 @@ export default function WidgetPage({ params }: WidgetPageProps) {
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setConversationId(data.conversationId)
-
-        const assistantMessage: Message = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: data.message,
+      if (!response.ok || !response.body) {
+        // Fallback to non-streaming
+        const fallbackResponse = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agentId,
+            conversationId,
+            visitorId,
+            message: text.trim(),
+          }),
+        })
+        if (fallbackResponse.ok) {
+          const data = await fallbackResponse.json()
+          setConversationId(data.conversationId)
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? { ...msg, content: data.message, isStreaming: false }
+                : msg
+            )
+          )
         }
-        setMessages((prev) => [...prev, assistantMessage])
+        return
+      }
+
+      // Read conversation ID from headers
+      const headerConvId = response.headers.get("X-Conversation-Id")
+      const headerVisitorId = response.headers.get("X-Visitor-Id")
+      if (headerConvId) setConversationId(headerConvId)
+      if (headerVisitorId && !visitorId) setVisitorId(headerVisitorId)
+
+      // Stream the response
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n\n")
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue
+          try {
+            const data = JSON.parse(line.slice(6))
+            if (data.done) {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, isStreaming: false }
+                    : msg
+                )
+              )
+            } else if (data.content) {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: msg.content + data.content }
+                    : msg
+                )
+              )
+            }
+          } catch {
+            // Skip malformed JSON
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to send message:", error)
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: "Sorry, something went wrong. Please try again.", isStreaming: false }
+            : msg
+        )
+      )
     } finally {
       setLoading(false)
     }
@@ -171,6 +250,33 @@ export default function WidgetPage({ params }: WidgetPageProps) {
     } catch (error) {
       console.error("Failed to submit lead:", error)
     }
+  }
+
+  const handleClose = useCallback(() => {
+    // Show rating if 2+ user messages and not already rated
+    const userMessages = messages.filter((m) => m.role === "user")
+    if (userMessages.length >= 2 && !ratingSubmitted && conversationId) {
+      setShowRating(true)
+    } else {
+      setIsOpen(false)
+    }
+  }, [messages, ratingSubmitted, conversationId])
+
+  const handleRatingSubmit = async () => {
+    if (rating > 0 && conversationId) {
+      try {
+        await fetch("/api/chat/rating", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversationId, rating }),
+        })
+      } catch (error) {
+        console.error("Failed to submit rating:", error)
+      }
+    }
+    setRatingSubmitted(true)
+    setShowRating(false)
+    setIsOpen(false)
   }
 
   const widgetColor = agent?.widget_color || "#2563eb"
@@ -206,12 +312,51 @@ export default function WidgetPage({ params }: WidgetPageProps) {
           </div>
         </div>
         <button
-          onClick={() => setIsOpen(false)}
+          onClick={handleClose}
           className="h-8 w-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
         >
           <X className="h-5 w-5" />
         </button>
       </div>
+
+      {/* Rating overlay */}
+      {showRating && (
+        <div className="absolute inset-0 bg-background/95 z-10 flex items-center justify-center">
+          <div className="text-center space-y-4 p-6">
+            <h3 className="text-lg font-semibold">How was your experience?</h3>
+            <p className="text-sm text-muted-foreground">Rate your conversation</p>
+            <div className="flex justify-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setRating(star)}
+                  onMouseEnter={() => setRatingHover(star)}
+                  onMouseLeave={() => setRatingHover(0)}
+                  className="p-1 transition-transform hover:scale-110"
+                >
+                  <Star
+                    className={cn(
+                      "h-8 w-8 transition-colors",
+                      (ratingHover || rating) >= star
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-muted-foreground/30"
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 justify-center">
+              <Button
+                size="sm"
+                onClick={handleRatingSubmit}
+                style={{ backgroundColor: widgetColor }}
+              >
+                {rating > 0 ? "Submit" : "Skip"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
@@ -230,7 +375,6 @@ export default function WidgetPage({ params }: WidgetPageProps) {
               </div>
             </div>
 
-            {/* Quick prompts */}
             {quickPrompts.length > 0 && (
               <div className="flex flex-wrap gap-2 ml-11">
                 {quickPrompts.map((prompt) => (
@@ -281,29 +425,22 @@ export default function WidgetPage({ params }: WidgetPageProps) {
                   : "bg-muted rounded-tl-none"
               )}
             >
-              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              <p className="text-sm whitespace-pre-wrap">
+                {msg.content}
+                {msg.isStreaming && msg.content === "" && (
+                  <span className="inline-flex gap-1 ml-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0.1s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0.2s]" />
+                  </span>
+                )}
+                {msg.isStreaming && msg.content !== "" && (
+                  <span className="inline-block w-1.5 h-4 bg-muted-foreground/50 animate-pulse ml-0.5 align-middle" />
+                )}
+              </p>
             </div>
           </div>
         ))}
-
-        {/* Typing indicator */}
-        {loading && (
-          <div className="flex gap-3">
-            <div
-              className="h-8 w-8 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: `${widgetColor}20` }}
-            >
-              <Bot className="h-4 w-4" style={{ color: widgetColor }} />
-            </div>
-            <div className="bg-muted rounded-lg rounded-tl-none p-3">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" />
-                <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0.1s]" />
-                <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0.2s]" />
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Lead capture */}
         {showLeadCapture && !leadSubmitted && agent && (

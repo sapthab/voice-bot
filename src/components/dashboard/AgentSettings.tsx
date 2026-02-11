@@ -9,8 +9,15 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+import { Loader2, Bot, MessageCircle } from "lucide-react"
 
 interface AgentSettingsProps {
   agent: Agent
@@ -27,6 +34,7 @@ export function AgentSettings({ agent }: AgentSettingsProps) {
     widget_title: agent.widget_title,
     widget_subtitle: agent.widget_subtitle || "",
     widget_color: agent.widget_color,
+    widget_position: agent.widget_position || "bottom-right",
     lead_capture_enabled: agent.lead_capture_enabled,
     lead_capture_message: agent.lead_capture_message,
     is_active: agent.is_active,
@@ -186,6 +194,53 @@ export function AgentSettings({ agent }: AgentSettingsProps) {
                 }
                 className="flex-1"
               />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Widget Position</Label>
+            <Select
+              value={settings.widget_position}
+              onValueChange={(value: "bottom-right" | "bottom-left") =>
+                setSettings((s) => ({ ...s, widget_position: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bottom-right">Bottom Right</SelectItem>
+                <SelectItem value="bottom-left">Bottom Left</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Preview Panel */}
+          <div className="space-y-2">
+            <Label>Preview</Label>
+            <div className="relative border rounded-lg p-4 bg-muted/30 h-48 overflow-hidden">
+              <div
+                className={`absolute bottom-3 ${settings.widget_position === "bottom-left" ? "left-3" : "right-3"} w-[200px] rounded-lg shadow-lg overflow-hidden border`}
+              >
+                <div
+                  className="flex items-center gap-2 px-3 py-2 text-white text-xs"
+                  style={{ backgroundColor: settings.widget_color }}
+                >
+                  <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center">
+                    <Bot className="h-3 w-3" />
+                  </div>
+                  <div>
+                    <div className="font-medium">{settings.widget_title || "Chat with us"}</div>
+                    {settings.widget_subtitle && (
+                      <div className="opacity-80 text-[10px]">{settings.widget_subtitle}</div>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-background p-2 text-[10px] text-muted-foreground">
+                  <div className="bg-muted rounded p-1.5 max-w-[80%]">
+                    {settings.welcome_message.slice(0, 60)}...
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>

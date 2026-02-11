@@ -125,6 +125,15 @@ export interface Database {
           lead_capture_message: string
           is_active: boolean
           is_trained: boolean
+          voice_enabled: boolean
+          voice_id: string | null
+          retell_agent_id: string | null
+          phone_number: string | null
+          phone_number_sid: string | null
+          voice_language: string
+          voice_speed: number
+          voice_welcome_message: string
+          voice_provider: 'retell'
           created_at: string
           updated_at: string
         }
@@ -147,6 +156,15 @@ export interface Database {
           lead_capture_message?: string
           is_active?: boolean
           is_trained?: boolean
+          voice_enabled?: boolean
+          voice_id?: string | null
+          retell_agent_id?: string | null
+          phone_number?: string | null
+          phone_number_sid?: string | null
+          voice_language?: string
+          voice_speed?: number
+          voice_welcome_message?: string
+          voice_provider?: 'retell'
           created_at?: string
           updated_at?: string
         }
@@ -169,6 +187,15 @@ export interface Database {
           lead_capture_message?: string
           is_active?: boolean
           is_trained?: boolean
+          voice_enabled?: boolean
+          voice_id?: string | null
+          retell_agent_id?: string | null
+          phone_number?: string | null
+          phone_number_sid?: string | null
+          voice_language?: string
+          voice_speed?: number
+          voice_welcome_message?: string
+          voice_provider?: 'retell'
           created_at?: string
           updated_at?: string
         }
@@ -285,6 +312,17 @@ export interface Database {
           metadata: Json
           started_at: string
           ended_at: string | null
+          channel: 'chat' | 'voice' | 'sms'
+          call_id: string | null
+          call_status: 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer' | null
+          call_duration: number | null
+          call_recording_url: string | null
+          call_from: string | null
+          call_to: string | null
+          call_transcript: string | null
+          satisfaction_rating: number | null
+          escalated: boolean
+          escalation_reason: string | null
           created_at: string
         }
         Insert: {
@@ -296,6 +334,17 @@ export interface Database {
           metadata?: Json
           started_at?: string
           ended_at?: string | null
+          channel?: 'chat' | 'voice' | 'sms'
+          call_id?: string | null
+          call_status?: 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer' | null
+          call_duration?: number | null
+          call_recording_url?: string | null
+          call_from?: string | null
+          call_to?: string | null
+          call_transcript?: string | null
+          satisfaction_rating?: number | null
+          escalated?: boolean
+          escalation_reason?: string | null
           created_at?: string
         }
         Update: {
@@ -307,6 +356,17 @@ export interface Database {
           metadata?: Json
           started_at?: string
           ended_at?: string | null
+          channel?: 'chat' | 'voice' | 'sms'
+          call_id?: string | null
+          call_status?: 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer' | null
+          call_duration?: number | null
+          call_recording_url?: string | null
+          call_from?: string | null
+          call_to?: string | null
+          call_transcript?: string | null
+          satisfaction_rating?: number | null
+          escalated?: boolean
+          escalation_reason?: string | null
           created_at?: string
         }
       }
@@ -317,6 +377,10 @@ export interface Database {
           role: 'user' | 'assistant' | 'system'
           content: string
           metadata: Json
+          sources_used: Json | null
+          confidence: number | null
+          latency_ms: number | null
+          tokens_used: number | null
           created_at: string
         }
         Insert: {
@@ -325,6 +389,10 @@ export interface Database {
           role: 'user' | 'assistant' | 'system'
           content: string
           metadata?: Json
+          sources_used?: Json | null
+          confidence?: number | null
+          latency_ms?: number | null
+          tokens_used?: number | null
           created_at?: string
         }
         Update: {
@@ -333,6 +401,10 @@ export interface Database {
           role?: 'user' | 'assistant' | 'system'
           content?: string
           metadata?: Json
+          sources_used?: Json | null
+          confidence?: number | null
+          latency_ms?: number | null
+          tokens_used?: number | null
           created_at?: string
         }
       }
@@ -480,6 +552,7 @@ export type TrainingSource = Database['public']['Tables']['training_sources']['R
 export type DocumentChunk = Database['public']['Tables']['document_chunks']['Row']
 export type FAQ = Database['public']['Tables']['faqs']['Row']
 export type Conversation = Database['public']['Tables']['conversations']['Row']
+export type ConversationInsert = Database['public']['Tables']['conversations']['Insert']
 export type Message = Database['public']['Tables']['messages']['Row']
 export type MessageInsert = Database['public']['Tables']['messages']['Insert']
 export type Lead = Database['public']['Tables']['leads']['Row']
@@ -488,3 +561,5 @@ export type QuickPrompt = Database['public']['Tables']['quick_prompts']['Row']
 export type AnalyticsEvent = Database['public']['Tables']['analytics_events']['Row']
 
 export type Vertical = Agent['vertical']
+export type Channel = Conversation['channel']
+export type CallStatus = NonNullable<Conversation['call_status']>

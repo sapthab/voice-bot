@@ -1,5 +1,6 @@
 import { getOpenAIClient } from "./openai"
 import { retrieveContext, buildContextPrompt } from "./rag"
+import { buildChatSystemPrompt } from "./prompt-builder"
 import { Agent, Message } from "@/types/database"
 
 const CHAT_MODEL = "gpt-4o-mini"
@@ -20,18 +21,8 @@ export async function generateChatResponse(
   const context = await retrieveContext(userMessage, agent.id)
   const contextPrompt = buildContextPrompt(context)
 
-  // Build system prompt
-  let systemPrompt = agent.system_prompt || ""
-
-  if (contextPrompt) {
-    systemPrompt += `\n\n## Context\nUse the following information to help answer questions:\n\n${contextPrompt}`
-  }
-
-  systemPrompt += `\n\n## Guidelines
-- Be helpful, friendly, and concise
-- If you don't have specific information, offer to help connect them with someone who can assist
-- Always stay in character as an AI assistant for ${agent.name}
-- Do not make up information that isn't provided in the context above`
+  // Build system prompt using the prompt builder
+  const systemPrompt = buildChatSystemPrompt(agent, { ragContext: contextPrompt })
 
   // Build messages array
   const messages: ChatMessage[] = [{ role: "system", content: systemPrompt }]

@@ -3,7 +3,7 @@ import { createClient, createAdminClient } from "@/lib/supabase/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const { companyName, userId } = await request.json()
+    const { companyName } = await request.json()
 
     if (!companyName) {
       return NextResponse.json(
@@ -12,9 +12,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Try to get user from Authorization header first, then from session
     const adminSupabase = await createAdminClient()
-    let authenticatedUserId = userId
+    let authenticatedUserId: string | null = null
 
     // Verify with Authorization header if provided
     const authHeader = request.headers.get("Authorization")

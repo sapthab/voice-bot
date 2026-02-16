@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { processFile } from "@/lib/scraper/file-processor"
 import { chunkText, estimateTokens } from "@/lib/scraper/chunker"
 import { generateEmbedding } from "@/lib/ai/embeddings"
+import { getAuthenticatedUser, verifyAgentOwnership, unauthorizedResponse, forbiddenResponse } from "@/lib/auth/api-auth"
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const SUPPORTED_TYPES = [
@@ -19,24 +20,11 @@ export async function POST(
   try {
     const { agentId } = await params
 
-    // Auth check
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getAuthenticatedUser()
+    if (!user) return unauthorizedResponse()
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Verify agent exists and belongs to user
-    const { data: agent } = await supabase
-      .from("agents")
-      .select("id, organization_id")
-      .eq("id", agentId)
-      .single()
-
-    if (!agent) {
-      return NextResponse.json({ error: "Agent not found" }, { status: 404 })
-    }
+    const agent = await verifyAgentOwnership(agentId, user.id)
+    if (!agent) return forbiddenResponse()
 
     const formData = await request.formData()
     const file = formData.get("file") as File | null
@@ -169,7 +157,7 @@ export async function POST(
   } catch (error) {
     console.error("File upload error:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
+      { error: "Internal server error" },
       { status: 500 }
     )
   }

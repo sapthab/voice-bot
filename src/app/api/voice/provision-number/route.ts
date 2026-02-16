@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
 import { provisionPhoneNumber } from "@/lib/voice/phone-numbers"
+import { getAuthenticatedUser, verifyAgentOwnership, unauthorizedResponse, forbiddenResponse } from "@/lib/auth/api-auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const user = await getAuthenticatedUser()
+    if (!user) return unauthorizedResponse()
 
     const { agentId, areaCode } = await request.json()
 
@@ -17,16 +13,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing agentId" }, { status: 400 })
     }
 
-    // Verify user owns this agent
-    const { data: agent } = await supabase
-      .from("agents")
-      .select("id, organization_id")
-      .eq("id", agentId)
-      .single()
-
-    if (!agent) {
-      return NextResponse.json({ error: "Agent not found" }, { status: 404 })
-    }
+    const agent = await verifyAgentOwnership(agentId, user.id)
+    if (!agent) return forbiddenResponse()
 
     const result = await provisionPhoneNumber(agentId, areaCode)
 
@@ -34,7 +22,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Provision phone number error:", error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
+      { error: "Failed to provision phone number" },
       { status: 500 }
     )
   }

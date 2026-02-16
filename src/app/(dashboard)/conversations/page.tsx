@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MessageSquare, User, Bot, Phone, AlertTriangle, Search } from "lucide-react"
+import { MessageSquare, User, Bot, Phone, AlertTriangle } from "lucide-react"
 import { ConversationSearch } from "@/components/dashboard/ConversationSearch"
 import { formatRelativeTime } from "@/lib/utils"
 import Link from "next/link"
@@ -67,6 +67,10 @@ export default async function ConversationsPage({
     .eq("user_id", user.id)
     .single()
 
+  if (membershipResult.error) {
+    console.error("Error fetching membership:", membershipResult.error)
+  }
+
   const membership = membershipResult.data as { organization_id: string } | null
 
   // Get agents for this organization
@@ -74,6 +78,10 @@ export default async function ConversationsPage({
     .from("agents")
     .select("id, name")
     .eq("organization_id", membership?.organization_id || "")
+
+  if (agentsResult.error) {
+    console.error("Error fetching agents:", agentsResult.error)
+  }
 
   const agents = (agentsResult.data || []) as { id: string; name: string }[]
   const agentIds = agents.map((a) => a.id)
@@ -86,7 +94,7 @@ export default async function ConversationsPage({
       *,
       agents(id, name, widget_color),
       messages(id, role, content, created_at),
-      leads(id, name, email)
+      leads!fk_lead(id, name, email)
     `
     )
     .in("agent_id", agentIds.length > 0 ? agentIds : [""])
@@ -101,7 +109,10 @@ export default async function ConversationsPage({
     query = query.eq("channel", channel)
   }
 
-  const { data } = await query
+  const { data, error: conversationsError } = await query
+  if (conversationsError) {
+    console.error("Error fetching conversations:", conversationsError)
+  }
   const conversations = (data || []) as ConversationWithRelations[]
 
   return (

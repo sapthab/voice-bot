@@ -12,6 +12,17 @@ export function buildChatSystemPrompt(agent: Agent, context: PromptContext): str
     systemPrompt += `\n\n## Context\nUse the following information to help answer questions:\n\n${context.ragContext}`
   }
 
+  // Add booking instructions if enabled
+  const agentAny = agent as Record<string, unknown>
+  if (agentAny.booking_enabled) {
+    systemPrompt += `\n\n## Appointment Booking
+You can check calendar availability and book appointments for customers.
+- When a customer wants to book, use the check_availability tool first to find open slots.
+- Present 2-3 available time options to the customer.
+- Always confirm the date, time, and customer details before booking.
+- After booking, confirm the appointment details with the customer.`
+  }
+
   systemPrompt += `\n\n## Guidelines
 - Be helpful, friendly, and concise
 - If you don't have specific information, offer to help connect them with someone who can assist
@@ -27,6 +38,12 @@ export function buildVoiceSystemPrompt(agent: Agent, context: PromptContext): st
 
   if (context.ragContext) {
     systemPrompt += `\n\nUse the following information to answer questions:\n${context.ragContext}`
+  }
+
+  // Add booking instructions if enabled
+  const agentAny = agent as Record<string, unknown>
+  if (agentAny.booking_enabled) {
+    systemPrompt += `\n\nYou can check calendar availability and book appointments for customers. For voice conversations, suggest 2-3 specific times conversationally. Always confirm the details before booking.`
   }
 
   systemPrompt += `\n\nVoice guidelines:

@@ -20,6 +20,7 @@ export function AgentTraining({ agentId, trainingSources }: AgentTrainingProps) 
   const router = useRouter()
   const [url, setUrl] = useState("")
   const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const handleAddSource = async () => {
     if (!url.trim()) return
@@ -44,6 +45,49 @@ export function AgentTraining({ agentId, trainingSources }: AgentTrainingProps) 
       toast.error(error instanceof Error ? error.message : "Failed to scrape website")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRefreshSource = async (source: TrainingSource) => {
+    setActionLoading(source.id)
+    try {
+      const response = await fetch("/api/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId, url: source.url }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to re-scrape")
+      }
+
+      toast.success("Website re-scraped successfully")
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to refresh source")
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeleteSource = async (sourceId: string) => {
+    setActionLoading(sourceId)
+    try {
+      const response = await fetch(`/api/agents/${agentId}/training-sources/${sourceId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete training source")
+      }
+
+      toast.success("Training source deleted")
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete source")
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -127,10 +171,26 @@ export function AgentTraining({ agentId, trainingSources }: AgentTrainingProps) 
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(source.status)}
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <RefreshCw className="h-4 w-4" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={actionLoading === source.id}
+                      onClick={() => handleRefreshSource(source)}
+                    >
+                      {actionLoading === source.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      disabled={actionLoading === source.id}
+                      onClick={() => handleDeleteSource(source.id)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

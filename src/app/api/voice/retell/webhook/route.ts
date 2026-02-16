@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { handleCallEnd } from "@/lib/voice/call-handler"
 import { createAdminClient } from "@/lib/supabase/server"
+import { triggerConversationProcessing } from "@/lib/processing/conversation-processor"
 
 // Retell webhook handler for call lifecycle events
 export async function POST(request: NextRequest) {
@@ -8,13 +9,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { event, call } = body
 
-    // Verify webhook signature if configured
-    const signature = request.headers.get("x-retell-signature")
-    if (process.env.RETELL_WEBHOOK_SECRET && signature) {
-      // Retell uses HMAC-SHA256 for webhook verification
+    // Enforce webhook signature verification
+    const webhookSecret = process.env.RETELL_WEBHOOK_SECRET
+    if (webhookSecret) {
+      const signature = request.headers.get("x-retell-signature")
+      if (!signature) {
+        console.error("Missing Retell webhook signature header")
+        return NextResponse.json({ error: "Missing signature" }, { status: 401 })
+      }
+
       const crypto = await import("crypto")
       const expectedSignature = crypto
-        .createHmac("sha256", process.env.RETELL_WEBHOOK_SECRET)
+        .createHmac("sha256", webhookSecret)
         .update(JSON.stringify(body))
         .digest("hex")
 
@@ -22,6 +28,10 @@ export async function POST(request: NextRequest) {
         console.error("Invalid Retell webhook signature")
         return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
       }
+    } else if (process.env.NODE_ENV === "production") {
+      // In production, require the webhook secret to be configured
+      console.error("RETELL_WEBHOOK_SECRET is not configured in production")
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 500 })
     }
 
     const callId = call?.call_id
@@ -71,7 +81,7 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (conversation) {
-          const convData = conversation as { agent_id: string; call_from: string | null }
+          const convData = conversation as { agent_id: string; call_from: string | null; id?: string }
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (supabase.from("analytics_events") as any).insert({
             agent_id: convData.agent_id,
@@ -83,6 +93,18 @@ export async function POST(request: NextRequest) {
               has_recording: !!recordingUrl,
             },
           })
+
+          // Trigger post-call processing (analytics, follow-ups, integrations)
+          // Find conversation ID by call_id
+          const { data: convForProcessing } = await supabase
+            .from("conversations")
+            .select("id")
+            .eq("call_id", callId)
+            .single()
+
+          if (convForProcessing) {
+            triggerConversationProcessing((convForProcessing as { id: string }).id)
+          }
         }
         break
       }

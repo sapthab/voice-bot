@@ -4,6 +4,8 @@ import { generateChatResponse } from "@/lib/ai/chat-handler"
 import { generateStreamingChatResponse } from "@/lib/ai/stream-handler"
 import { checkEscalation } from "@/lib/ai/escalation"
 
+const MAX_MESSAGE_LENGTH = 5000
+
 export async function POST(request: NextRequest) {
   try {
     const { agentId, conversationId, visitorId, message } = await request.json()
@@ -12,6 +14,13 @@ export async function POST(request: NextRequest) {
     if (!agentId || !message) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      )
+    }
+
+    if (typeof message !== "string" || message.length > MAX_MESSAGE_LENGTH) {
+      return NextResponse.json(
+        { error: `Message must be a string of at most ${MAX_MESSAGE_LENGTH} characters` },
         { status: 400 }
       )
     }
@@ -167,6 +176,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const conversationId = searchParams.get("conversationId")
+  const visitorId = searchParams.get("visitorId")
 
   if (!conversationId) {
     return NextResponse.json(
@@ -176,6 +186,34 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createAdminClient()
+
+  // Verify the conversation exists and the requester is authorized
+  const { data: conversation } = await supabase
+    .from("conversations")
+    .select("visitor_id")
+    .eq("id", conversationId)
+    .single()
+
+  if (!conversation) {
+    return NextResponse.json({ error: "Conversation not found" }, { status: 404 })
+  }
+
+  const convData = conversation as { visitor_id: string }
+
+  // For widget use: require matching visitorId
+  // For dashboard use: require authenticated user (checked via import)
+  if (visitorId) {
+    if (convData.visitor_id !== visitorId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+  } else {
+    // No visitorId provided — require authenticated dashboard user
+    const { getAuthenticatedUser } = await import("@/lib/auth/api-auth")
+    const user = await getAuthenticatedUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+  }
 
   const { data: messages, error } = await supabase
     .from("messages")

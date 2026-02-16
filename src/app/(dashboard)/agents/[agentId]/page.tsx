@@ -18,6 +18,11 @@ import { AgentSettings } from "@/components/dashboard/AgentSettings"
 import { AgentTraining } from "@/components/dashboard/AgentTraining"
 import { FAQEditor } from "@/components/dashboard/FAQEditor"
 import { VoiceSettings } from "@/components/dashboard/VoiceSettings"
+import { FollowupSettings } from "@/components/followups/FollowupSettings"
+import { FollowupDeliveries } from "@/components/followups/FollowupDeliveries"
+import { IntegrationsSettings } from "@/components/integrations/IntegrationsSettings"
+import { BookingSettings } from "@/components/booking/BookingSettings"
+import { AppointmentsList } from "@/components/booking/AppointmentsList"
 import { Agent, TrainingSource, FAQ } from "@/types/database"
 
 interface AgentPageProps {
@@ -165,6 +170,9 @@ export default async function AgentPage({ params }: AgentPageProps) {
           <TabsTrigger value="training">Training</TabsTrigger>
           <TabsTrigger value="faqs">FAQs</TabsTrigger>
           <TabsTrigger value="voice">Voice</TabsTrigger>
+          <TabsTrigger value="booking">Booking</TabsTrigger>
+          <TabsTrigger value="followups">Follow-ups</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -230,6 +238,20 @@ export default async function AgentPage({ params }: AgentPageProps) {
 
         <TabsContent value="voice">
           <VoiceSettings agent={agent} />
+        </TabsContent>
+
+        <TabsContent value="booking" className="space-y-6">
+          <BookingSettings agentId={agentId} />
+          <AppointmentsList agentId={agentId} />
+        </TabsContent>
+
+        <TabsContent value="followups" className="space-y-6">
+          <FollowupSettings agentId={agentId} />
+          <FollowupDeliveries agentId={agentId} />
+        </TabsContent>
+
+        <TabsContent value="integrations">
+          <IntegrationsSettings agentId={agentId} />
         </TabsContent>
 
         <TabsContent value="settings">

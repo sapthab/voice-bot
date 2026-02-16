@@ -75,7 +75,6 @@ export default function SignupPage() {
           },
           body: JSON.stringify({
             companyName,
-            userId: authData.user.id,
           }),
         })
 

@@ -134,6 +134,8 @@ export interface Database {
           voice_speed: number
           voice_welcome_message: string
           voice_provider: 'retell'
+          booking_enabled: boolean
+          booking_settings: Json | null
           created_at: string
           updated_at: string
         }
@@ -165,6 +167,8 @@ export interface Database {
           voice_speed?: number
           voice_welcome_message?: string
           voice_provider?: 'retell'
+          booking_enabled?: boolean
+          booking_settings?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -196,6 +200,8 @@ export interface Database {
           voice_speed?: number
           voice_welcome_message?: string
           voice_provider?: 'retell'
+          booking_enabled?: boolean
+          booking_settings?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -323,6 +329,7 @@ export interface Database {
           satisfaction_rating: number | null
           escalated: boolean
           escalation_reason: string | null
+          post_processing_status: 'pending' | 'processing' | 'completed' | 'failed' | null
           created_at: string
         }
         Insert: {
@@ -345,6 +352,7 @@ export interface Database {
           satisfaction_rating?: number | null
           escalated?: boolean
           escalation_reason?: string | null
+          post_processing_status?: 'pending' | 'processing' | 'completed' | 'failed' | null
           created_at?: string
         }
         Update: {
@@ -367,6 +375,7 @@ export interface Database {
           satisfaction_rating?: number | null
           escalated?: boolean
           escalation_reason?: string | null
+          post_processing_status?: 'pending' | 'processing' | 'completed' | 'failed' | null
           created_at?: string
         }
       }
@@ -507,6 +516,349 @@ export interface Database {
           created_at?: string
         }
       }
+      conversation_analysis: {
+        Row: {
+          id: string
+          conversation_id: string
+          agent_id: string
+          sentiment: 'positive' | 'neutral' | 'negative' | 'mixed'
+          sentiment_score: number
+          topics: string[]
+          summary: string
+          resolution_status: 'resolved' | 'escalated' | 'unresolved' | 'unknown'
+          knowledge_gaps: string[]
+          confidence_avg: number
+          key_phrases: string[]
+          customer_intent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          agent_id: string
+          sentiment: 'positive' | 'neutral' | 'negative' | 'mixed'
+          sentiment_score: number
+          topics: string[]
+          summary: string
+          resolution_status?: 'resolved' | 'escalated' | 'unresolved' | 'unknown'
+          knowledge_gaps?: string[]
+          confidence_avg?: number
+          key_phrases?: string[]
+          customer_intent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          agent_id?: string
+          sentiment?: 'positive' | 'neutral' | 'negative' | 'mixed'
+          sentiment_score?: number
+          topics?: string[]
+          summary?: string
+          resolution_status?: 'resolved' | 'escalated' | 'unresolved' | 'unknown'
+          knowledge_gaps?: string[]
+          confidence_avg?: number
+          key_phrases?: string[]
+          customer_intent?: string | null
+          created_at?: string
+        }
+      }
+      analytics_aggregates: {
+        Row: {
+          id: string
+          agent_id: string
+          period: 'daily' | 'weekly' | 'monthly'
+          period_start: string
+          total_conversations: number
+          avg_duration: number | null
+          resolution_rate: number
+          escalation_rate: number
+          avg_sentiment_score: number
+          top_topics: Json
+          total_leads: number
+          channel_breakdown: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          period: 'daily' | 'weekly' | 'monthly'
+          period_start: string
+          total_conversations?: number
+          avg_duration?: number | null
+          resolution_rate?: number
+          escalation_rate?: number
+          avg_sentiment_score?: number
+          top_topics?: Json
+          total_leads?: number
+          channel_breakdown?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          period?: 'daily' | 'weekly' | 'monthly'
+          period_start?: string
+          total_conversations?: number
+          avg_duration?: number | null
+          resolution_rate?: number
+          escalation_rate?: number
+          avg_sentiment_score?: number
+          top_topics?: Json
+          total_leads?: number
+          channel_breakdown?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      followup_configs: {
+        Row: {
+          id: string
+          agent_id: string
+          channel: 'sms' | 'email'
+          enabled: boolean
+          delay_minutes: number
+          template_subject: string | null
+          template_body: string
+          from_name: string | null
+          from_email: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          channel: 'sms' | 'email'
+          enabled?: boolean
+          delay_minutes?: number
+          template_subject?: string | null
+          template_body: string
+          from_name?: string | null
+          from_email?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          channel?: 'sms' | 'email'
+          enabled?: boolean
+          delay_minutes?: number
+          template_subject?: string | null
+          template_body?: string
+          from_name?: string | null
+          from_email?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      followup_deliveries: {
+        Row: {
+          id: string
+          followup_config_id: string
+          conversation_id: string
+          status: 'pending' | 'sent' | 'delivered' | 'failed'
+          external_id: string | null
+          error_message: string | null
+          recipient: string
+          sent_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          followup_config_id: string
+          conversation_id: string
+          status?: 'pending' | 'sent' | 'delivered' | 'failed'
+          external_id?: string | null
+          error_message?: string | null
+          recipient: string
+          sent_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          followup_config_id?: string
+          conversation_id?: string
+          status?: 'pending' | 'sent' | 'delivered' | 'failed'
+          external_id?: string | null
+          error_message?: string | null
+          recipient?: string
+          sent_at?: string | null
+          created_at?: string
+        }
+      }
+      integrations: {
+        Row: {
+          id: string
+          agent_id: string
+          provider: 'hubspot' | 'webhook'
+          name: string
+          enabled: boolean
+          config: Json
+          field_mapping: Json
+          enabled_events: string[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          provider: 'hubspot' | 'webhook'
+          name: string
+          enabled?: boolean
+          config?: Json
+          field_mapping?: Json
+          enabled_events?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          provider?: 'hubspot' | 'webhook'
+          name?: string
+          enabled?: boolean
+          config?: Json
+          field_mapping?: Json
+          enabled_events?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      webhook_deliveries: {
+        Row: {
+          id: string
+          integration_id: string
+          event: string
+          payload: Json
+          status: 'pending' | 'sent' | 'failed'
+          response_code: number | null
+          response_body: string | null
+          attempts: number
+          next_retry_at: string | null
+          error_message: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          integration_id: string
+          event: string
+          payload: Json
+          status?: 'pending' | 'sent' | 'failed'
+          response_code?: number | null
+          response_body?: string | null
+          attempts?: number
+          next_retry_at?: string | null
+          error_message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          integration_id?: string
+          event?: string
+          payload?: Json
+          status?: 'pending' | 'sent' | 'failed'
+          response_code?: number | null
+          response_body?: string | null
+          attempts?: number
+          next_retry_at?: string | null
+          error_message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      calendar_connections: {
+        Row: {
+          id: string
+          agent_id: string
+          provider: 'google'
+          encrypted_tokens: string
+          calendar_id: string
+          calendar_name: string | null
+          settings: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          provider?: 'google'
+          encrypted_tokens: string
+          calendar_id: string
+          calendar_name?: string | null
+          settings?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          provider?: 'google'
+          encrypted_tokens?: string
+          calendar_id?: string
+          calendar_name?: string | null
+          settings?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      appointments: {
+        Row: {
+          id: string
+          agent_id: string
+          conversation_id: string | null
+          calendar_connection_id: string
+          external_event_id: string
+          title: string
+          start_time: string
+          end_time: string
+          customer_name: string | null
+          customer_email: string | null
+          customer_phone: string | null
+          notes: string | null
+          status: 'confirmed' | 'cancelled' | 'rescheduled' | 'completed'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          conversation_id?: string | null
+          calendar_connection_id: string
+          external_event_id: string
+          title: string
+          start_time: string
+          end_time: string
+          customer_name?: string | null
+          customer_email?: string | null
+          customer_phone?: string | null
+          notes?: string | null
+          status?: 'confirmed' | 'cancelled' | 'rescheduled' | 'completed'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          conversation_id?: string | null
+          calendar_connection_id?: string
+          external_event_id?: string
+          title?: string
+          start_time?: string
+          end_time?: string
+          customer_name?: string | null
+          customer_email?: string | null
+          customer_phone?: string | null
+          notes?: string | null
+          status?: 'confirmed' | 'cancelled' | 'rescheduled' | 'completed'
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Functions: {
       match_documents: {
@@ -559,6 +911,19 @@ export type Lead = Database['public']['Tables']['leads']['Row']
 export type LeadInsert = Database['public']['Tables']['leads']['Insert']
 export type QuickPrompt = Database['public']['Tables']['quick_prompts']['Row']
 export type AnalyticsEvent = Database['public']['Tables']['analytics_events']['Row']
+
+export type ConversationAnalysis = Database['public']['Tables']['conversation_analysis']['Row']
+export type ConversationAnalysisInsert = Database['public']['Tables']['conversation_analysis']['Insert']
+export type AnalyticsAggregate = Database['public']['Tables']['analytics_aggregates']['Row']
+export type FollowupConfig = Database['public']['Tables']['followup_configs']['Row']
+export type FollowupConfigInsert = Database['public']['Tables']['followup_configs']['Insert']
+export type FollowupDelivery = Database['public']['Tables']['followup_deliveries']['Row']
+export type Integration = Database['public']['Tables']['integrations']['Row']
+export type IntegrationInsert = Database['public']['Tables']['integrations']['Insert']
+export type WebhookDelivery = Database['public']['Tables']['webhook_deliveries']['Row']
+export type CalendarConnection = Database['public']['Tables']['calendar_connections']['Row']
+export type Appointment = Database['public']['Tables']['appointments']['Row']
+export type AppointmentInsert = Database['public']['Tables']['appointments']['Insert']
 
 export type Vertical = Agent['vertical']
 export type Channel = Conversation['channel']

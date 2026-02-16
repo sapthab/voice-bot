@@ -72,10 +72,10 @@ export async function GET(request: NextRequest) {
           created_at,
           agent_id,
           agents(id, name, widget_color),
-          leads(id, name, email)
+          leads!fk_lead(id, name, email)
         )
       `)
-      .ilike("content", `%${query}%`)
+      .ilike("content", `%${query.replace(/[%_\\]/g, "\\$&")}%`)
       .order("created_at", { ascending: false })
       .limit(20)
 

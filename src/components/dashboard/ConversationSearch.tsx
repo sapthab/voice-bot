@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -26,10 +26,9 @@ export function ConversationSearch() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const handleSearch = async (value: string) => {
-    setQuery(value)
-
+  const handleSearch = useCallback(async (value: string) => {
     if (value.length < 2) {
       setResults([])
       setHasSearched(false)
@@ -51,15 +50,15 @@ export function ConversationSearch() {
       setSearching(false)
       setHasSearched(true)
     }
-  }
+  }, [])
 
-  // Debounce search
-  let timeout: NodeJS.Timeout
-  const debouncedSearch = (value: string) => {
+  const debouncedSearch = useCallback((value: string) => {
     setQuery(value)
-    clearTimeout(timeout)
-    timeout = setTimeout(() => handleSearch(value), 300)
-  }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    timeoutRef.current = setTimeout(() => handleSearch(value), 300)
+  }, [handleSearch])
 
   return (
     <div className="space-y-2">

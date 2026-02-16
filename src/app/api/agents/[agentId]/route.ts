@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
+import { getAuthenticatedUser, verifyAgentOwnership, unauthorizedResponse, forbiddenResponse } from "@/lib/auth/api-auth"
 import { Agent } from "@/types/database"
 
 interface QuickPrompt {
@@ -60,6 +61,13 @@ export async function PATCH(
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   const { agentId } = await params
+
+  const user = await getAuthenticatedUser()
+  if (!user) return unauthorizedResponse()
+
+  const agent = await verifyAgentOwnership(agentId, user.id)
+  if (!agent) return forbiddenResponse()
+
   const body = await request.json()
 
   const supabase = await createAdminClient()
@@ -72,7 +80,8 @@ export async function PATCH(
     .single()
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Agent update error:", error)
+    return NextResponse.json({ error: "Failed to update agent" }, { status: 500 })
   }
 
   return NextResponse.json({ agent: data })
@@ -84,13 +93,20 @@ export async function DELETE(
 ) {
   const { agentId } = await params
 
+  const user = await getAuthenticatedUser()
+  if (!user) return unauthorizedResponse()
+
+  const agent = await verifyAgentOwnership(agentId, user.id)
+  if (!agent) return forbiddenResponse()
+
   const supabase = await createAdminClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from("agents") as any).delete().eq("id", agentId)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Agent delete error:", error)
+    return NextResponse.json({ error: "Failed to delete agent" }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

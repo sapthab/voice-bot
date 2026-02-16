@@ -232,9 +232,26 @@ export default function WidgetPage({ params }: WidgetPageProps) {
     sendMessage(input)
   }
 
+  const [leadError, setLeadError] = useState<string | null>(null)
+
   const handleLeadSubmit = async () => {
+    setLeadError(null)
+
+    // Validate email if present
+    if (leadData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadData.email)) {
+      setLeadError("Please enter a valid email address")
+      return
+    }
+
+    // Ensure at least one field is filled
+    const hasData = Object.values(leadData).some((v) => v.trim())
+    if (!hasData) {
+      setLeadError("Please fill in at least one field")
+      return
+    }
+
     try {
-      await fetch("/api/leads", {
+      const response = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -244,11 +261,17 @@ export default function WidgetPage({ params }: WidgetPageProps) {
         }),
       })
 
+      if (!response.ok) {
+        setLeadError("Failed to submit. Please try again.")
+        return
+      }
+
       localStorage.setItem(`voicebot_lead_${agentId}`, "true")
       setLeadSubmitted(true)
       setShowLeadCapture(false)
     } catch (error) {
       console.error("Failed to submit lead:", error)
+      setLeadError("Failed to submit. Please try again.")
     }
   }
 
@@ -333,6 +356,7 @@ export default function WidgetPage({ params }: WidgetPageProps) {
                   onMouseEnter={() => setRatingHover(star)}
                   onMouseLeave={() => setRatingHover(0)}
                   className="p-1 transition-transform hover:scale-110"
+                  aria-label={`Rate ${star} star${star !== 1 ? "s" : ""}`}
                 >
                   <Star
                     className={cn(
@@ -458,6 +482,9 @@ export default function WidgetPage({ params }: WidgetPageProps) {
                   className="text-sm"
                 />
               ))}
+              {leadError && (
+                <p className="text-xs text-red-500">{leadError}</p>
+              )}
               <div className="flex gap-2">
                 <Button
                   size="sm"

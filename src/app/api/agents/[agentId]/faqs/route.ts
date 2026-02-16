@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { generateEmbedding } from "@/lib/ai/embeddings"
+import { getAuthenticatedUser, verifyAgentOwnership, unauthorizedResponse, forbiddenResponse } from "@/lib/auth/api-auth"
 
 export async function POST(
   request: NextRequest,
@@ -8,6 +9,13 @@ export async function POST(
 ) {
   try {
     const { agentId } = await params
+
+    const user = await getAuthenticatedUser()
+    if (!user) return unauthorizedResponse()
+
+    const agent = await verifyAgentOwnership(agentId, user.id)
+    if (!agent) return forbiddenResponse()
+
     const { question, answer } = await request.json()
 
     if (!question || !answer) {
@@ -34,7 +42,8 @@ export async function POST(
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error("FAQ creation error:", error)
+      return NextResponse.json({ error: "Failed to create FAQ" }, { status: 500 })
     }
 
     return NextResponse.json({ faq: data })

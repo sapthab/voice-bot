@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
+import { getAuthenticatedUser, verifyAgentOwnership, unauthorizedResponse, forbiddenResponse } from "@/lib/auth/api-auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +52,15 @@ export async function POST(request: NextRequest) {
       conversation_id: conversationId,
     })
 
+    // Dispatch lead_captured to integrations (fire-and-forget)
+    import("@/lib/integrations").then(({ dispatchEvent }) => {
+      dispatchEvent("lead_captured", {
+        agentId,
+        conversationId,
+        lead: lead as Record<string, unknown>,
+      }).catch((err: unknown) => console.error("Integration dispatch error:", err))
+    }).catch(() => {})
+
     return NextResponse.json({ lead })
   } catch (error) {
     console.error("Leads API error:", error)
@@ -62,6 +72,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const user = await getAuthenticatedUser()
+  if (!user) return unauthorizedResponse()
+
   const searchParams = request.nextUrl.searchParams
   const agentId = searchParams.get("agentId")
 
@@ -69,16 +82,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing agentId" }, { status: 400 })
   }
 
+  const agent = await verifyAgentOwnership(agentId, user.id)
+  if (!agent) return forbiddenResponse()
+
   const supabase = await createAdminClient()
 
   const { data: leads, error } = await supabase
     .from("leads")
-    .select("*, conversations(id, started_at)")
+    .select("*, conversations!leads_conversation_id_fkey(id, started_at)")
     .eq("agent_id", agentId)
     .order("created_at", { ascending: false })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Leads fetch error:", error)
+    return NextResponse.json({ error: "Failed to fetch leads" }, { status: 500 })
   }
 
   return NextResponse.json({ leads })

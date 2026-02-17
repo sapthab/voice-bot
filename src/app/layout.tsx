@@ -1,17 +1,11 @@
 import type { Metadata } from "next"
 import localFont from "next/font/local"
-import { Inter, Space_Grotesk } from "next/font/google"
+import { Inter } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
 const inter = Inter({
   variable: "--font-body",
-  subsets: ["latin"],
-  display: "swap",
-})
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space",
   subsets: ["latin"],
   display: "swap",
 })
@@ -64,7 +58,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${spaceGrotesk.variable} ${geistSans.variable} ${waldenburgNormal.variable} ${waldenburgBuch.variable} ${waldenburgFett.variable} ${waldenburgFettHalbschmal.variable} antialiased`}
+        className={`${inter.variable} ${geistSans.variable} ${waldenburgNormal.variable} ${waldenburgBuch.variable} ${waldenburgFett.variable} ${waldenburgFettHalbschmal.variable} antialiased`}
       >
         {children}
         <Toaster />

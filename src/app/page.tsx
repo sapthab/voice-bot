@@ -153,7 +153,7 @@ export default async function HomePage() {
                 <div className="h-10 w-10 rounded-lg bg-foreground/[0.04] flex items-center justify-center mb-6">
                   <Phone className="h-5 w-5 text-foreground/60" />
                 </div>
-                <h3 className="text-xl font-semibold tracking-tight mb-3">Voice Agents</h3>
+                <h3 className="text-xl font-semibold tracking-tight mb-3 heading">Voice Agents</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed mb-6">
                   AI agents that pick up the phone, hold natural conversations, qualify leads,
                   and schedule appointments — with sub-300ms latency and natural turn-taking.
@@ -182,7 +182,7 @@ export default async function HomePage() {
                 <div className="h-10 w-10 rounded-lg bg-foreground/[0.04] flex items-center justify-center mb-6">
                   <MessageSquare className="h-5 w-5 text-foreground/60" />
                 </div>
-                <h3 className="text-xl font-semibold tracking-tight mb-3">Chat Agents</h3>
+                <h3 className="text-xl font-semibold tracking-tight mb-3 heading">Chat Agents</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed mb-6">
                   Intelligent chat widgets that engage every visitor, draw answers from your
                   knowledge base, capture leads, and hand off to your team when needed.
@@ -250,7 +250,7 @@ export default async function HomePage() {
                   <div className="h-10 w-10 rounded-lg bg-white border border-border flex items-center justify-center mb-5">
                     <item.icon className="h-5 w-5 text-foreground/50" />
                   </div>
-                  <h3 className="text-lg font-semibold tracking-tight mb-2">{item.title}</h3>
+                  <h3 className="text-lg font-semibold tracking-tight mb-2 heading">{item.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
                 </div>
               ))}
@@ -305,7 +305,7 @@ export default async function HomePage() {
                   <div className="h-10 w-10 rounded-lg bg-foreground/[0.04] flex items-center justify-center mb-4">
                     <feature.icon className="h-5 w-5 text-foreground/50" />
                   </div>
-                  <h3 className="text-[15px] font-semibold tracking-tight mb-2">{feature.title}</h3>
+                  <h3 className="text-[15px] font-semibold tracking-tight mb-2 heading">{feature.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
                 </div>
               ))}
@@ -362,7 +362,7 @@ export default async function HomePage() {
                 },
               ].map((useCase) => (
                 <div key={useCase.title} className="rounded-xl border border-border p-6 hover:border-foreground/15 transition-colors">
-                  <h3 className="font-semibold tracking-tight mb-4">{useCase.title}</h3>
+                  <h3 className="font-semibold tracking-tight mb-4 heading">{useCase.title}</h3>
                   <ul className="space-y-2.5">
                     {useCase.items.map((item) => (
                       <li key={item} className="flex items-center gap-2.5 text-[13px] text-muted-foreground">
@@ -428,7 +428,7 @@ export default async function HomePage() {
         <section className="py-28 md:py-40">
           <div className="max-w-[1120px] mx-auto px-6">
             <div className="rounded-2xl bg-foreground text-white p-12 md:p-20 text-center">
-              <h2 className="text-3xl md:text-[2.75rem] font-bold tracking-tight leading-tight mb-5">
+              <h2 className="text-3xl md:text-[2.75rem] font-bold tracking-tight leading-tight mb-5 display">
                 Your next customer is calling.
                 <br className="hidden md:block" />
                 Will you be there?
@@ -489,7 +489,7 @@ export default async function HomePage() {
               },
             ].map((col) => (
               <div key={col.title}>
-                <h4 className="text-sm font-semibold mb-4">{col.title}</h4>
+                <h4 className="text-sm font-semibold mb-4 heading">{col.title}</h4>
                 <ul className="space-y-2.5">
                   {col.links.map((link) => (
                     <li key={link}>

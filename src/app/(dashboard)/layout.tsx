@@ -50,7 +50,7 @@ export default async function DashboardLayout({
             fullName: profile?.full_name || undefined,
           }}
         />
-        <main className="p-5 lg:p-8">{children}</main>
+        <main className="p-6 lg:p-10">{children}</main>
       </div>
     </div>
   )

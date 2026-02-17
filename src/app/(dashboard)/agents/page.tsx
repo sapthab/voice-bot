@@ -50,9 +50,9 @@ export default async function AgentsPage() {
   const agents = (data || []) as Agent[]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold heading">All Agents</h1>
+        <h1 className="text-2xl font-semibold heading">All Agents</h1>
         <Link href="/agents/new">
           <Button size="sm">
             <PlusCircle className="h-4 w-4 mr-2" />
@@ -158,8 +158,8 @@ export default async function AgentsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Bot className="h-16 w-16 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No agents yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
+            <h3 className="text-lg font-medium mb-3 heading">No agents yet</h3>
+            <p className="text-[15px] text-muted-foreground text-center mb-5 leading-relaxed">
               Create your first AI receptionist to start handling customer
               inquiries
             </p>

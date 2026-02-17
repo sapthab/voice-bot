@@ -63,24 +63,24 @@ export function Sidebar({ orgName, userEmail }: SidebarProps) {
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-border/60 bg-background">
       {/* Brand */}
-      <div className="flex h-14 items-center gap-2.5 px-5 border-b border-border/60">
-        <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-xs">H</span>
+      <div className="flex h-14 items-center gap-3 px-5 border-b border-border/60">
+        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+          <span className="text-primary-foreground font-bold text-[13px]">H</span>
         </div>
         <span className="font-semibold heading text-[15px]">HeyAgent</span>
       </div>
 
       {/* Workspace */}
-      <div className="flex items-center gap-2.5 px-5 py-3 border-b border-border/60">
+      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border/60">
         <Building2 className="h-4 w-4 text-muted-foreground/70 shrink-0" />
-        <span className="text-[13px] font-medium text-foreground/80 truncate">{orgName}</span>
+        <span className="text-[14px] font-medium text-foreground/80 truncate">{orgName}</span>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         {navSections.map((section, idx) => (
           <div key={section.label} className={cn(idx > 0 && "mt-5")}>
-            <p className="px-3 mb-1.5 text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+            <p className="px-3 mb-2 text-[11px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
               {section.label}
             </p>
             <div className="space-y-0.5">
@@ -102,7 +102,7 @@ export function Sidebar({ orgName, userEmail }: SidebarProps) {
                     key={item.name}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 text-[13px] rounded-lg transition-all duration-150",
+                      "flex items-center gap-3 px-3 py-2.5 text-[14px] rounded-lg transition-all duration-150",
                       active
                         ? "bg-primary/8 text-primary font-medium"
                         : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
@@ -119,13 +119,13 @@ export function Sidebar({ orgName, userEmail }: SidebarProps) {
       </nav>
 
       {/* User info */}
-      <div className="border-t border-border/60 px-4 py-3">
-        <div className="flex items-center gap-2.5">
+      <div className="border-t border-border/60 px-4 py-3.5">
+        <div className="flex items-center gap-3">
           <CircleUser className="h-5 w-5 text-muted-foreground/60 shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] text-foreground/70 truncate">{userEmail}</p>
+            <p className="text-[14px] text-foreground/70 truncate">{userEmail}</p>
           </div>
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0 font-medium">
+          <Badge variant="secondary" className="text-[11px] px-2 py-0.5 shrink-0 font-medium">
             Free
           </Badge>
         </div>

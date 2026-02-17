@@ -31,32 +31,32 @@ export default async function HomePage() {
     <div className="min-h-screen flex flex-col">
       {/* ── Nav ── */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-[1120px] mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-[1120px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-md bg-foreground flex items-center justify-center">
-                <span className="text-white font-bold text-xs">H</span>
+            <Link href="/" className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-md bg-foreground flex items-center justify-center">
+                <span className="text-white font-bold text-[13px]">H</span>
               </div>
-              <span className="font-semibold text-sm tracking-tight">HeyAgent</span>
+              <span className="font-semibold text-[15px] tracking-tight">HeyAgent</span>
             </Link>
             <nav className="hidden md:flex items-center gap-8">
               {["Products", "Features", "Use Cases", "Pricing"].map((item) => (
                 <Link
                   key={item}
                   href={`#${item.toLowerCase().replace(" ", "-")}`}
-                  className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-[14px] text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {item}
                 </Link>
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="hidden sm:block text-[13px] text-muted-foreground hover:text-foreground transition-colors">
+          <div className="flex items-center gap-5">
+            <Link href="/login" className="hidden sm:block text-[14px] text-muted-foreground hover:text-foreground transition-colors">
               Log in
             </Link>
             <Link href="/signup">
-              <Button size="sm" className="h-8 px-4 text-[13px] rounded-lg">
+              <Button size="sm">
                 Get started
                 <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Button>
@@ -70,36 +70,36 @@ export default async function HomePage() {
         <section className="pt-32 pb-20 md:pt-40 md:pb-28">
           <div className="max-w-[1120px] mx-auto px-6">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-3 py-1 mb-8">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-3.5 py-1.5 mb-8">
                 <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse-subtle" />
-                <span className="text-[11px] font-medium text-muted-foreground">Now supporting 32 languages</span>
+                <span className="text-[13px] font-medium text-muted-foreground">Now supporting 32 languages</span>
               </div>
 
-              <h1 className="text-[clamp(2.5rem,6vw,4.5rem)] display leading-[1.05] tracking-tight mb-6">
+              <h1 className="text-[clamp(2.5rem,6vw,4.5rem)] display leading-[1.08] tracking-tight mb-7">
                 AI agents that talk
                 <br />
                 like humans do
               </h1>
 
-              <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mb-10">
+              <p className="text-[19px] text-muted-foreground leading-[1.65] max-w-xl mb-10">
                 Deploy voice and chat agents that handle customer calls, capture leads,
                 and book appointments. Available 24/7, in any language.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 mb-5">
                 <Link href="/signup">
-                  <Button size="lg" className="h-11 px-6 text-sm font-medium rounded-lg">
+                  <Button size="lg">
                     Start for free
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
                 <Link href="#products">
-                  <Button size="lg" variant="outline" className="h-11 px-6 text-sm font-medium rounded-lg">
+                  <Button size="lg" variant="outline">
                     See how it works
                   </Button>
                 </Link>
               </div>
-              <p className="text-xs text-muted-foreground/60">No credit card required</p>
+              <p className="text-[13px] text-muted-foreground/60 mt-1">No credit card required</p>
             </div>
           </div>
         </section>
@@ -121,7 +121,7 @@ export default async function HomePage() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-3 opacity-20">
               {["Lenovo", "Capsule", "SmartEnergy", "Opendoor", "Anker", "DoorDash"].map((name) => (
-                <span key={name} className="text-sm font-semibold tracking-wide whitespace-nowrap">{name}</span>
+                <span key={name} className="text-[15px] font-semibold tracking-wide whitespace-nowrap">{name}</span>
               ))}
             </div>
           </div>
@@ -141,7 +141,7 @@ export default async function HomePage() {
         <section id="products" className="pb-28 md:pb-40">
           <div className="max-w-[1120px] mx-auto px-6">
             <div className="mb-16">
-              <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-3">Products</p>
+              <p className="text-[13px] font-medium tracking-[0.12em] uppercase text-muted-foreground mb-4">Products</p>
               <h2 className="text-3xl md:text-4xl display leading-tight">
                 Two channels. One platform.
               </h2>
@@ -154,7 +154,7 @@ export default async function HomePage() {
                   <Phone className="h-5 w-5 text-foreground/60" />
                 </div>
                 <h3 className="text-xl font-semibold tracking-tight mb-3 heading">Voice Agents</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                <p className="text-[15px] text-muted-foreground leading-[1.7] mb-7">
                   AI agents that pick up the phone, hold natural conversations, qualify leads,
                   and schedule appointments — with sub-300ms latency and natural turn-taking.
                 </p>
@@ -166,13 +166,13 @@ export default async function HomePage() {
                     "Call recording & transcription",
                     "Warm transfer to humans",
                   ].map((item) => (
-                    <li key={item} className="flex items-center gap-2.5 text-[13px] text-muted-foreground">
+                    <li key={item} className="flex items-center gap-2.5 text-[14px] text-muted-foreground leading-relaxed">
                       <span className="h-1 w-1 rounded-full bg-foreground/25 shrink-0" />
                       {item}
                     </li>
                   ))}
                 </ul>
-                <Link href="/signup" className="inline-flex items-center gap-1.5 text-[13px] font-medium hover:underline underline-offset-4">
+                <Link href="/signup" className="inline-flex items-center gap-1.5 text-[14px] font-medium hover:underline underline-offset-4">
                   Get started <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -183,7 +183,7 @@ export default async function HomePage() {
                   <MessageSquare className="h-5 w-5 text-foreground/60" />
                 </div>
                 <h3 className="text-xl font-semibold tracking-tight mb-3 heading">Chat Agents</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                <p className="text-[15px] text-muted-foreground leading-[1.7] mb-7">
                   Intelligent chat widgets that engage every visitor, draw answers from your
                   knowledge base, capture leads, and hand off to your team when needed.
                 </p>
@@ -195,13 +195,13 @@ export default async function HomePage() {
                     "One-line embed on any site",
                     "Conversation analytics",
                   ].map((item) => (
-                    <li key={item} className="flex items-center gap-2.5 text-[13px] text-muted-foreground">
+                    <li key={item} className="flex items-center gap-2.5 text-[14px] text-muted-foreground leading-relaxed">
                       <span className="h-1 w-1 rounded-full bg-foreground/25 shrink-0" />
                       {item}
                     </li>
                   ))}
                 </ul>
-                <Link href="/signup" className="inline-flex items-center gap-1.5 text-[13px] font-medium hover:underline underline-offset-4">
+                <Link href="/signup" className="inline-flex items-center gap-1.5 text-[14px] font-medium hover:underline underline-offset-4">
                   Get started <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -213,7 +213,7 @@ export default async function HomePage() {
         <section className="py-28 md:py-40 bg-[#fafafa]">
           <div className="max-w-[1120px] mx-auto px-6">
             <div className="mb-16">
-              <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-3">How it works</p>
+              <p className="text-[13px] font-medium tracking-[0.12em] uppercase text-muted-foreground mb-4">How it works</p>
               <h2 className="text-3xl md:text-4xl display leading-tight">
                 Live in under ten minutes
               </h2>
@@ -250,8 +250,8 @@ export default async function HomePage() {
                   <div className="h-10 w-10 rounded-lg bg-white border border-border flex items-center justify-center mb-5">
                     <item.icon className="h-5 w-5 text-foreground/50" />
                   </div>
-                  <h3 className="text-lg font-semibold tracking-tight mb-2 heading">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+                  <h3 className="text-lg font-semibold tracking-tight mb-3 heading">{item.title}</h3>
+                  <p className="text-[15px] text-muted-foreground leading-[1.7]">{item.description}</p>
                 </div>
               ))}
             </div>
@@ -262,7 +262,7 @@ export default async function HomePage() {
         <section id="features" className="py-28 md:py-40">
           <div className="max-w-[1120px] mx-auto px-6">
             <div className="mb-16">
-              <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-3">Features</p>
+              <p className="text-[13px] font-medium tracking-[0.12em] uppercase text-muted-foreground mb-4">Features</p>
               <h2 className="text-3xl md:text-4xl display leading-tight max-w-lg">
                 Everything you need to scale conversations
               </h2>
@@ -305,8 +305,8 @@ export default async function HomePage() {
                   <div className="h-10 w-10 rounded-lg bg-foreground/[0.04] flex items-center justify-center mb-4">
                     <feature.icon className="h-5 w-5 text-foreground/50" />
                   </div>
-                  <h3 className="text-[15px] font-semibold tracking-tight mb-2 heading">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+                  <h3 className="text-[16px] font-semibold tracking-tight mb-3 heading">{feature.title}</h3>
+                  <p className="text-[15px] text-muted-foreground leading-[1.7]">{feature.description}</p>
                 </div>
               ))}
             </div>
@@ -325,7 +325,7 @@ export default async function HomePage() {
               ].map((stat) => (
                 <div key={stat.label} className="text-center">
                   <p className="text-4xl md:text-5xl font-bold tracking-tight mb-2">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="text-[15px] text-muted-foreground">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -336,7 +336,7 @@ export default async function HomePage() {
         <section id="use-cases" className="py-28 md:py-40">
           <div className="max-w-[1120px] mx-auto px-6">
             <div className="mb-16">
-              <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-3">Use cases</p>
+              <p className="text-[13px] font-medium tracking-[0.12em] uppercase text-muted-foreground mb-4">Use cases</p>
               <h2 className="text-3xl md:text-4xl display leading-tight max-w-lg">
                 Built for the industries that need it most
               </h2>
@@ -365,7 +365,7 @@ export default async function HomePage() {
                   <h3 className="font-semibold tracking-tight mb-4 heading">{useCase.title}</h3>
                   <ul className="space-y-2.5">
                     {useCase.items.map((item) => (
-                      <li key={item} className="flex items-center gap-2.5 text-[13px] text-muted-foreground">
+                      <li key={item} className="flex items-center gap-2.5 text-[14px] text-muted-foreground leading-relaxed">
                         <span className="h-1 w-1 rounded-full bg-foreground/20 shrink-0" />
                         {item}
                       </li>
@@ -381,7 +381,7 @@ export default async function HomePage() {
         <section className="py-28 md:py-40 bg-[#fafafa]">
           <div className="max-w-[1120px] mx-auto px-6">
             <div className="mb-16">
-              <p className="text-xs font-medium tracking-[0.15em] uppercase text-muted-foreground mb-3">Testimonials</p>
+              <p className="text-[13px] font-medium tracking-[0.12em] uppercase text-muted-foreground mb-4">Testimonials</p>
               <h2 className="text-3xl md:text-4xl display leading-tight">
                 What our customers say
               </h2>
@@ -411,12 +411,12 @@ export default async function HomePage() {
                 },
               ].map((t) => (
                 <div key={t.name} className="rounded-xl border border-border bg-white p-8 flex flex-col">
-                  <blockquote className="text-[15px] text-foreground/80 leading-relaxed mb-8 flex-1">
+                  <blockquote className="text-[16px] text-foreground/80 leading-[1.7] mb-8 flex-1">
                     &ldquo;{t.quote}&rdquo;
                   </blockquote>
                   <div>
-                    <p className="text-sm font-semibold">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.role}</p>
+                    <p className="text-[15px] font-semibold">{t.name}</p>
+                    <p className="text-[13px] text-muted-foreground">{t.role}</p>
                   </div>
                 </div>
               ))}
@@ -433,24 +433,24 @@ export default async function HomePage() {
                 <br className="hidden md:block" />
                 Will you be there?
               </h2>
-              <p className="text-white/50 max-w-md mx-auto mb-10">
+              <p className="text-[17px] text-white/50 leading-[1.65] max-w-md mx-auto mb-10">
                 Join hundreds of businesses scaling conversations with
                 AI agents that sound genuinely human.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/signup">
-                  <Button size="lg" className="bg-white text-foreground hover:bg-white/90 h-11 px-6 rounded-lg w-full sm:w-auto">
+                  <Button size="lg" className="bg-white text-foreground hover:bg-white/90 w-full sm:w-auto">
                     Start for free
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
                 <Link href="/pricing">
-                  <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 hover:text-white h-11 px-6 rounded-lg w-full sm:w-auto">
+                  <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 hover:text-white w-full sm:w-auto">
                     Compare plans
                   </Button>
                 </Link>
               </div>
-              <p className="text-white/25 text-xs mt-6">
+              <p className="text-white/25 text-[13px] mt-7">
                 No credit card required
               </p>
             </div>
@@ -463,13 +463,13 @@ export default async function HomePage() {
         <div className="max-w-[1120px] mx-auto px-6">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
             <div className="lg:col-span-2">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="h-7 w-7 rounded-md bg-foreground flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">H</span>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="h-8 w-8 rounded-md bg-foreground flex items-center justify-center">
+                  <span className="text-white font-bold text-[13px]">H</span>
                 </div>
-                <span className="font-semibold text-sm tracking-tight">HeyAgent</span>
+                <span className="font-semibold text-[15px] tracking-tight">HeyAgent</span>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+              <p className="text-[15px] text-muted-foreground leading-[1.7] max-w-xs">
                 The most realistic AI voice and chat agent platform.
                 Deploy production-ready agents in minutes.
               </p>
@@ -489,11 +489,11 @@ export default async function HomePage() {
               },
             ].map((col) => (
               <div key={col.title}>
-                <h4 className="text-sm font-semibold mb-4 heading">{col.title}</h4>
-                <ul className="space-y-2.5">
+                <h4 className="text-[15px] font-semibold mb-4 heading">{col.title}</h4>
+                <ul className="space-y-3">
                   {col.links.map((link) => (
                     <li key={link}>
-                      <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                      <Link href="#" className="text-[14px] text-muted-foreground hover:text-foreground transition-colors">
                         {link}
                       </Link>
                     </li>
@@ -503,12 +503,12 @@ export default async function HomePage() {
             ))}
           </div>
           <div className="mt-14 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-muted-foreground/50">
+            <p className="text-[13px] text-muted-foreground/50">
               &copy; {new Date().getFullYear()} HeyAgent, Inc.
             </p>
             <div className="flex items-center gap-5">
               {["Twitter", "LinkedIn", "GitHub"].map((s) => (
-                <Link key={s} href="#" className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                <Link key={s} href="#" className="text-[13px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
                   {s}
                 </Link>
               ))}

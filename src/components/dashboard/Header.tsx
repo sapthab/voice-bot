@@ -44,7 +44,7 @@ export function Header({ user }: HeaderProps) {
     : user?.email?.slice(0, 2).toUpperCase() || "?"
 
   return (
-    <header className="sticky top-0 z-40 flex h-12 items-center gap-4 border-b border-border/60 bg-background/80 backdrop-blur-sm px-4 lg:px-6">
+    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-border/60 bg-background/80 backdrop-blur-sm px-5 lg:px-8">
       <MobileNav />
       <div className="flex-1" />
       <DropdownMenu>

@@ -14,6 +14,10 @@ export async function POST(request: NextRequest) {
       fallbackMessage,
       leadCaptureMessage,
       leadCaptureFields,
+      language,
+      voiceId,
+      voiceSpeed,
+      voiceLanguage,
     } = body
 
     if (!name || !vertical) {
@@ -103,6 +107,10 @@ export async function POST(request: NextRequest) {
       fallback_message: fallbackMessage || "I'm not sure I understand. Could you please rephrase that?",
       lead_capture_message: leadCaptureMessage || "Before we continue, could you share your contact info?",
       lead_capture_fields: leadCaptureFields || ["name", "email", "phone"],
+      language: language || "en-US",
+      ...(voiceId && { voice_id: voiceId }),
+      ...(voiceSpeed !== undefined && { voice_speed: voiceSpeed }),
+      ...(voiceLanguage && { voice_language: voiceLanguage }),
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

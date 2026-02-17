@@ -12,6 +12,9 @@ export interface VerticalTemplate {
   leadCaptureFields: string[]
   defaultFaqs: { question: string; answer: string }[]
   quickPrompts: string[]
+  defaultVoice: { voiceId: string; persona: string }
+  escalationTriggers: string[]
+  configSummary: { promptFocus: string; specialCapabilities: string[] }
 }
 
 export const homeServicesTemplate: VerticalTemplate = {
@@ -79,6 +82,20 @@ Guidelines:
     "Emergency service",
     "Get a quote",
   ],
+  defaultVoice: { voiceId: "11labs-Adrian", persona: "Professional and confident" },
+  escalationTriggers: [
+    "Customer reports a gas leak or flooding",
+    "Customer expresses frustration or asks for a manager",
+    "Urgent safety concern mentioned",
+  ],
+  configSummary: {
+    promptFocus: "Emergency dispatch, service scheduling, and quote requests",
+    specialCapabilities: [
+      "Emergency triage and prioritization",
+      "Service area validation",
+      "Appointment scheduling with urgency levels",
+    ],
+  },
 }
 
 export const dentalTemplate: VerticalTemplate = {
@@ -146,4 +163,18 @@ Guidelines:
     "New patient appointment",
     "Check insurance",
   ],
+  defaultVoice: { voiceId: "11labs-Sara", persona: "Caring and professional" },
+  escalationTriggers: [
+    "Patient reports severe pain or dental emergency",
+    "Patient asks about complex procedures or costs",
+    "Patient expresses dental anxiety needing reassurance",
+  ],
+  configSummary: {
+    promptFocus: "Patient scheduling, insurance verification, and anxiety management",
+    specialCapabilities: [
+      "Emergency dental triage",
+      "Insurance plan awareness",
+      "Gentle, reassuring communication style",
+    ],
+  },
 }

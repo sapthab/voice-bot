@@ -18,7 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Loader2, Phone, PhoneOff, PhoneCall } from "lucide-react"
+import { Loader2, Phone, PhoneOff, PhoneCall, AlertCircle } from "lucide-react"
+import { SUPPORTED_LANGUAGES } from "@/lib/constants/languages"
+import { getVoicesForLanguage, getDefaultVoiceForLanguage, hasNativeVoice } from "@/lib/constants/voices"
 
 interface VoiceSettingsProps {
   agent: Agent
@@ -39,23 +41,6 @@ interface VoiceStatus {
   }
 }
 
-const VOICE_OPTIONS = [
-  { id: "11labs-Adrian", name: "Adrian (Male, American)" },
-  { id: "11labs-Myra", name: "Myra (Female, American)" },
-  { id: "11labs-Chris", name: "Chris (Male, British)" },
-  { id: "11labs-Ellie", name: "Ellie (Female, British)" },
-  { id: "11labs-Mark", name: "Mark (Male, Professional)" },
-  { id: "11labs-Sara", name: "Sara (Female, Professional)" },
-]
-
-const LANGUAGE_OPTIONS = [
-  { id: "en-US", name: "English (US)" },
-  { id: "en-GB", name: "English (UK)" },
-  { id: "es-ES", name: "Spanish" },
-  { id: "fr-FR", name: "French" },
-  { id: "de-DE", name: "German" },
-]
-
 export function VoiceSettings({ agent }: VoiceSettingsProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -69,7 +54,11 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
     voice_welcome_message:
       agent.voice_welcome_message ||
       "Hello! Thank you for calling. How can I help you today?",
+    language: (agent as Record<string, unknown>).language as string || "en-US",
   })
+
+  const filteredVoices = getVoicesForLanguage(settings.voice_language)
+  const showNoNativeVoiceWarning = !hasNativeVoice(settings.voice_language)
 
   useEffect(() => {
     fetchVoiceStatus()
@@ -85,6 +74,16 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
     } catch (error) {
       console.error("Failed to fetch voice status:", error)
     }
+  }
+
+  const handleLanguageChange = (value: string) => {
+    const defaultVoice = getDefaultVoiceForLanguage(value)
+    setSettings((s) => ({
+      ...s,
+      voice_language: value,
+      language: value,
+      voice_id: defaultVoice.id,
+    }))
   }
 
   const handleProvision = async () => {
@@ -264,6 +263,25 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
+            <Label>Language</Label>
+            <Select
+              value={settings.voice_language}
+              onValueChange={handleLanguageChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <SelectItem key={lang.code} value={lang.code}>
+                    {lang.flag} {lang.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label>Voice</Label>
             <Select
               value={settings.voice_id}
@@ -275,34 +293,19 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
                 <SelectValue placeholder="Select a voice" />
               </SelectTrigger>
               <SelectContent>
-                {VOICE_OPTIONS.map((voice) => (
+                {filteredVoices.map((voice) => (
                   <SelectItem key={voice.id} value={voice.id}>
-                    {voice.name}
+                    {voice.name} ({voice.gender === "male" ? "M" : "F"}, {voice.accent})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Language</Label>
-            <Select
-              value={settings.voice_language}
-              onValueChange={(value) =>
-                setSettings((s) => ({ ...s, voice_language: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGE_OPTIONS.map((lang) => (
-                  <SelectItem key={lang.id} value={lang.id}>
-                    {lang.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {showNoNativeVoiceWarning && (
+              <p className="text-xs text-amber-600 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                No native voice available for this language. Using English voices as fallback.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

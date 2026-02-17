@@ -134,6 +134,7 @@ export interface Database {
           voice_speed: number
           voice_welcome_message: string
           voice_provider: 'retell'
+          language: string
           booking_enabled: boolean
           booking_settings: Json | null
           created_at: string
@@ -167,6 +168,7 @@ export interface Database {
           voice_speed?: number
           voice_welcome_message?: string
           voice_provider?: 'retell'
+          language?: string
           booking_enabled?: boolean
           booking_settings?: Json | null
           created_at?: string
@@ -200,6 +202,7 @@ export interface Database {
           voice_speed?: number
           voice_welcome_message?: string
           voice_provider?: 'retell'
+          language?: string
           booking_enabled?: boolean
           booking_settings?: Json | null
           created_at?: string

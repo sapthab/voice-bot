@@ -29,6 +29,19 @@ Guidelines:
     leadCaptureFields: ["name", "email", "phone"],
     defaultFaqs: [],
     quickPrompts: ["Learn more", "Contact us", "Schedule a call", "Pricing"],
+    defaultVoice: { voiceId: "11labs-Adrian", persona: "Professional and confident" },
+    escalationTriggers: [
+      "Customer asks to speak with a human or manager",
+      "Customer expresses frustration or dissatisfaction",
+    ],
+    configSummary: {
+      promptFocus: "General reception, scheduling, and inquiry routing",
+      specialCapabilities: [
+        "Multi-department inquiry routing",
+        "Appointment scheduling",
+        "Contact information collection",
+      ],
+    },
   },
   home_services: homeServicesTemplate,
   dental: dentalTemplate,
@@ -59,6 +72,20 @@ Guidelines:
       { question: "How do I request prescription refills?", answer: "For prescription refills, please contact our office during business hours or use our patient portal." },
     ],
     quickPrompts: ["Book appointment", "Refill prescription", "Office hours", "New patient"],
+    defaultVoice: { voiceId: "11labs-Sara", persona: "Caring and professional" },
+    escalationTriggers: [
+      "Patient describes emergency symptoms",
+      "Patient requests medical advice or diagnosis",
+      "Patient mentions HIPAA or privacy concerns",
+    ],
+    configSummary: {
+      promptFocus: "Patient intake, appointment scheduling, and urgency triage",
+      specialCapabilities: [
+        "Emergency triage with 911 redirection",
+        "Insurance verification awareness",
+        "HIPAA-conscious communication",
+      ],
+    },
   },
   legal: {
     vertical: "legal",
@@ -87,6 +114,20 @@ Guidelines:
       { question: "What areas of law do you practice?", answer: "Our firm handles various legal matters. Please describe your situation so I can connect you with the right attorney." },
     ],
     quickPrompts: ["Schedule consultation", "Case inquiry", "Attorney availability", "Office location"],
+    defaultVoice: { voiceId: "11labs-Mark", persona: "Authoritative and professional" },
+    escalationTriggers: [
+      "Client asks for specific legal advice",
+      "Client mentions time-sensitive legal deadlines",
+      "Client describes an active legal emergency",
+    ],
+    configSummary: {
+      promptFocus: "Consultation scheduling and confidential intake",
+      specialCapabilities: [
+        "Confidentiality-first communication",
+        "Legal matter categorization",
+        "Attorney matching by practice area",
+      ],
+    },
   },
   real_estate: {
     vertical: "real_estate",
@@ -114,6 +155,20 @@ Guidelines:
       { question: "What areas do you cover?", answer: "We serve the greater metropolitan area and surrounding communities. Let us know where you're looking and we can help." },
     ],
     quickPrompts: ["View listings", "Sell my home", "Schedule a tour", "Market analysis"],
+    defaultVoice: { voiceId: "11labs-Myra", persona: "Friendly and approachable" },
+    escalationTriggers: [
+      "Client wants to make or negotiate an offer",
+      "Client asks about mortgage or financing details",
+      "Client requests a specific agent by name",
+    ],
+    configSummary: {
+      promptFocus: "Property tours, market analysis, and buyer/seller matching",
+      specialCapabilities: [
+        "Property search criteria collection",
+        "Tour scheduling",
+        "Market knowledge awareness",
+      ],
+    },
   },
   restaurant: {
     vertical: "restaurant",
@@ -141,6 +196,20 @@ Guidelines:
       { question: "Do you take reservations?", answer: "Yes! We recommend reservations, especially for weekends and larger parties. How many guests and what date were you thinking?" },
     ],
     quickPrompts: ["Make reservation", "View menu", "Hours & location", "Private events"],
+    defaultVoice: { voiceId: "11labs-Ellie", persona: "Warm and welcoming" },
+    escalationTriggers: [
+      "Guest reports a food allergy or safety concern",
+      "Guest has a complaint about a past visit",
+      "Guest requests a large party or private event",
+    ],
+    configSummary: {
+      promptFocus: "Reservations, menu inquiries, and dietary accommodations",
+      specialCapabilities: [
+        "Reservation management",
+        "Dietary restriction awareness",
+        "Event and catering inquiry handling",
+      ],
+    },
   },
   ecommerce: {
     vertical: "ecommerce",
@@ -168,6 +237,20 @@ Guidelines:
       { question: "How long does shipping take?", answer: "Standard shipping takes 5-7 business days. Express shipping options are available at checkout for faster delivery." },
     ],
     quickPrompts: ["Track my order", "Return policy", "Product question", "Contact support"],
+    defaultVoice: { voiceId: "11labs-Myra", persona: "Friendly and approachable" },
+    escalationTriggers: [
+      "Customer has a billing or payment issue",
+      "Customer reports a damaged or wrong item",
+      "Customer requests a refund for a high-value order",
+    ],
+    configSummary: {
+      promptFocus: "Order tracking, returns processing, and product recommendations",
+      specialCapabilities: [
+        "Order status inquiries",
+        "Return and refund guidance",
+        "Product discovery assistance",
+      ],
+    },
   },
 }
 

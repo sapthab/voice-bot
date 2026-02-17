@@ -1,8 +1,18 @@
 import { Agent } from "@/types/database"
+import { getLanguageByCode, isEnglish } from "@/lib/constants/languages"
 
 interface PromptContext {
   ragContext: string
   conversationType?: "chat" | "voice"
+}
+
+function buildLanguageInstruction(agent: Agent): string {
+  const langCode = (agent as Record<string, unknown>).language as string | undefined
+  if (!langCode || isEnglish(langCode)) return ""
+  const lang = getLanguageByCode(langCode)
+  if (!lang) return ""
+  return `\n\nYou MUST respond in ${lang.name}. All your messages should be in ${lang.name}.
+Do not switch to English unless the user explicitly asks.`
 }
 
 export function buildChatSystemPrompt(agent: Agent, context: PromptContext): string {
@@ -30,6 +40,8 @@ You can check calendar availability and book appointments for customers.
 - Do not make up information that isn't provided in the context above
 - Use markdown formatting when it improves readability`
 
+  systemPrompt += buildLanguageInstruction(agent)
+
   return systemPrompt
 }
 
@@ -55,6 +67,8 @@ export function buildVoiceSystemPrompt(agent: Agent, context: PromptContext): st
 - Do not make up information not provided in the context
 - Spell out numbers and abbreviations naturally
 - Avoid saying "as an AI" or referencing that you are artificial`
+
+  systemPrompt += buildLanguageInstruction(agent)
 
   return systemPrompt
 }

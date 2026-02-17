@@ -111,84 +111,56 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="heading">Recent Agents</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {agents.length > 0 ? (
-              <div className="space-y-4">
-                {agents.map((agent) => (
-                  <Link
-                    key={agent.id}
-                    href={`/agents/${agent.id}`}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+      <Card>
+        <CardHeader>
+          <CardTitle className="heading">Recent Agents</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {agents.length > 0 ? (
+            <div className="space-y-4">
+              {agents.map((agent) => (
+                <Link
+                  key={agent.id}
+                  href={`/agents/${agent.id}`}
+                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Bot className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{agent.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {agent.vertical.replace("_", " ")}
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className={`px-2 py-1 rounded-full text-xs ${
+                      agent.is_active
+                        ? "bg-success/10 text-success"
+                        : "bg-muted text-muted-foreground"
+                    }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Bot className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{agent.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {agent.vertical.replace("_", " ")}
-                        </p>
-                      </div>
-                    </div>
-                    <div
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        agent.is_active
-                          ? "bg-success/10 text-success"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {agent.is_active ? "Active" : "Inactive"}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Bot className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground mb-4">No agents yet</p>
-                <Link href="/agents/new">
-                  <Button variant="outline">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Create your first agent
-                  </Button>
+                    {agent.is_active ? "Active" : "Inactive"}
+                  </div>
                 </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="heading">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Link href="/agents/new" className="block">
-              <Button variant="outline" className="w-full justify-start">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Create new agent
-              </Button>
-            </Link>
-            <Link href="/conversations" className="block">
-              <Button variant="outline" className="w-full justify-start">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                View conversations
-              </Button>
-            </Link>
-            <Link href="/leads" className="block">
-              <Button variant="outline" className="w-full justify-start">
-                <Users className="h-4 w-4 mr-2" />
-                Manage leads
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Bot className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground mb-4">No agents yet</p>
+              <Link href="/agents/new">
+                <Button variant="outline">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Create your first agent
+                </Button>
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

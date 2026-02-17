@@ -44,14 +44,14 @@ export function Header({ user }: HeaderProps) {
     : user?.email?.slice(0, 2).toUpperCase() || "?"
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
+    <header className="sticky top-0 z-40 flex h-12 items-center gap-4 border-b border-border/60 bg-background/80 backdrop-blur-sm px-4 lg:px-6">
       <MobileNav />
       <div className="flex-1" />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-            <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-primary/10 text-primary text-sm">
+          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-primary/8 text-primary text-xs font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>

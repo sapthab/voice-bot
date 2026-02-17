@@ -17,18 +17,32 @@ export default async function DashboardLayout({
     redirect("/login")
   }
 
-  // Fetch user profile
-  const profileResult = await supabase
-    .from("profiles")
-    .select("full_name, email")
-    .eq("id", user.id)
-    .single()
+  // Fetch user profile and organization
+  const [profileResult, membershipResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("organization_members")
+      .select("organization_id, organizations(name)")
+      .eq("user_id", user.id)
+      .single(),
+  ])
 
   const profile = profileResult.data as { full_name: string | null; email: string } | null
+  const membership = membershipResult.data as {
+    organization_id: string
+    organizations: { name: string } | null
+  } | null
+
+  const orgName = membership?.organizations?.name || "My Workspace"
+  const userEmail = profile?.email || user.email || ""
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <Sidebar />
+    <div className="min-h-screen bg-muted/40">
+      <Sidebar orgName={orgName} userEmail={userEmail} />
       <div className="lg:pl-64">
         <Header
           user={{
@@ -36,7 +50,7 @@ export default async function DashboardLayout({
             fullName: profile?.full_name || undefined,
           }}
         />
-        <main className="p-4 lg:p-6">{children}</main>
+        <main className="p-5 lg:p-8">{children}</main>
       </div>
     </div>
   )

@@ -1,9 +1,17 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Bot, PlusCircle, MoreHorizontal, ExternalLink } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Bot, PlusCircle, MoreHorizontal, ExternalLink, Phone, Mic } from "lucide-react"
 import Link from "next/link"
 import {
   DropdownMenu,
@@ -44,90 +52,107 @@ export default async function AgentsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold heading">Agents</h1>
-          <p className="text-muted-foreground">
-            Manage your AI chat agents
-          </p>
-        </div>
+        <h1 className="text-xl font-semibold heading">All Agents</h1>
         <Link href="/agents/new">
-          <Button>
+          <Button size="sm">
             <PlusCircle className="h-4 w-4 mr-2" />
-            New Agent
+            Create an Agent
           </Button>
         </Link>
       </div>
 
       {agents.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {agents.map((agent) => (
-            <Card key={agent.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-start justify-between pb-2">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="h-10 w-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: `${agent.widget_color}20` }}
-                  >
-                    <Bot
-                      className="h-5 w-5"
-                      style={{ color: agent.widget_color }}
-                    />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">{agent.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {agent.vertical.replace("_", " ")}
-                    </p>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href={`/agents/${agent.id}`}>View Details</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <a
-                        href={`/widget/${agent.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+        <div className="rounded-xl border border-border/60 bg-card shadow-[0_1px_3px_0_rgb(0_0_0/0.04)]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-4">Agent Name</TableHead>
+                <TableHead>Vertical</TableHead>
+                <TableHead>Voice</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {agents.map((agent) => (
+                <TableRow key={agent.id}>
+                  <TableCell className="pl-4">
+                    <Link
+                      href={`/agents/${agent.id}`}
+                      className="flex items-center gap-3 hover:underline"
+                    >
+                      <div
+                        className="h-8 w-8 rounded-md flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${agent.widget_color}20` }}
                       >
-                        Test Widget
-                        <ExternalLink className="h-3 w-3 ml-2" />
-                      </a>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
+                        <Bot
+                          className="h-4 w-4"
+                          style={{ color: agent.widget_color }}
+                        />
+                      </div>
+                      <span className="font-medium">{agent.name}</span>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-normal capitalize">
+                      {agent.vertical.replace("_", " ")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {agent.voice_enabled ? (
+                      <Mic className="h-4 w-4 text-primary" />
+                    ) : (
+                      <span className="text-muted-foreground text-sm">--</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {agent.phone_number ? (
+                      <span className="flex items-center gap-1 text-sm">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        {agent.phone_number}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">--</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <Badge variant={agent.is_active ? "success" : "secondary"}>
                       {agent.is_active ? "Active" : "Inactive"}
                     </Badge>
-                    {agent.is_trained && (
-                      <Badge variant="outline">Trained</Badge>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
                     {formatRelativeTime(agent.created_at)}
-                  </span>
-                </div>
-                <Link
-                  href={`/agents/${agent.id}`}
-                  className="mt-4 block"
-                >
-                  <Button variant="outline" className="w-full" size="sm">
-                    Manage Agent
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/agents/${agent.id}`}>View Details</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <a
+                            href={`/widget/${agent.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Test Widget
+                            <ExternalLink className="h-3 w-3 ml-2" />
+                          </a>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       ) : (
         <Card>

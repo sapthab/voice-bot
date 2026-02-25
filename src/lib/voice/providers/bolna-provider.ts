@@ -23,6 +23,9 @@ const BOLNA_LANGUAGE_MAP: Record<
   "en-GB": { asr: "en", tts: "en-GB", language: "English" },
 }
 
+// Indian language codes → country "IN" for phone number search
+const INDIAN_LANGUAGE_CODES = new Set(["hi-IN", "ta-IN", "te-IN", "bn-IN", "mr-IN"])
+
 async function bolnaFetch(
   path: string,
   options: RequestInit = {}
@@ -63,190 +66,231 @@ export class BolnaProvider implements VoiceProvider {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL
 
-    // Create Bolna agent with full configuration
-    const createResponse = await bolnaFetch("/agent", {
+    const BOLNA_DEFAULT_VOICE = "V9LCAAi4tTlqe9JadbCo"
+    const voiceId = (agent.voice_id || "").startsWith("11labs-")
+      ? BOLNA_DEFAULT_VOICE
+      : agent.voice_id || BOLNA_DEFAULT_VOICE
+
+    const llmBaseUrl = `${appUrl}/api/voice/bolna`
+
+    // ── Step 1: Create Bolna agent ────────────────────────────────────────────
+    const createResponse = await bolnaFetch("/v2/agent", {
       method: "POST",
       body: JSON.stringify({
-        agent_name: agent.name,
-        agent_type: "inbound",
-        agent_welcome_message:
-          agent.voice_welcome_message ||
-          "Hello! Thank you for calling. How can I help you today?",
-        agent_prompt: agent.system_prompt || "",
+        agent_config: {
+          agent_name: agent.name,
+          agent_type: "inbound",
+          agent_welcome_message:
+            agent.voice_welcome_message ||
+            "Hello! Thank you for calling. How can I help you today?",
+          webhook_url: `${appUrl}/api/voice/bolna/webhook`,
 
-        // Audio — language
-        language: langConfig.language,
+          tasks: [
+            {
+              task_type: "conversation",
+              toolchain: {
+                execution: "parallel",
+                pipelines: [["transcriber", "llm", "synthesizer"]],
+              },
+              tools_config: {
+                input: { provider: "plivo", format: "wav" },
+                output: { provider: "plivo", format: "wav" },
 
-        // STT: Deepgram nova-3
-        asr_config: {
-          provider: "deepgram",
-          model: "nova-3",
-          language: langConfig.asr,
-          keywords: [],
+                transcriber: {
+                  provider: "deepgram",
+                  model: "nova-3",
+                  language: langConfig.asr,
+                  stream: true,
+                  encoding: "linear16",
+                },
+
+                llm_agent: {
+                  agent_type: "simple_llm_agent",
+                  agent_flow_type: "streaming",
+                  llm_config: {
+                    provider: "openai",
+                    model: "gpt-4o-mini",
+                    base_url: llmBaseUrl,
+                    max_tokens: 450,
+                    temperature: 0.2,
+                    request_json: true,
+                  },
+                },
+
+                synthesizer: {
+                  provider: "elevenlabs",
+                  stream: true,
+                  buffer_size: 200,
+                  audio_format: "wav",
+                  provider_config: {
+                    voice: voiceId,
+                    model: "eleven_turbo_v2_5",
+                    voice_id: voiceId,
+                    speed: agent.voice_speed || 1,
+                  },
+                },
+              },
+
+              task_config: {
+                hangup_after_silence: 10,
+                call_terminate: 300,
+                number_of_words_for_interruption: 2,
+                incremental_delay: 200,
+              },
+            },
+          ],
         },
 
-        // TTS: ElevenLabs
-        tts_config: {
-          provider: "elevenlabs",
-          model: "eleven_turbo_v2_5",
-          voice: agent.voice_id || "bolna-anita",
-          language: langConfig.tts,
-          buffer_size: 200,
-          speed_rate: agent.voice_speed || 1,
-          similarity_boost: 0.75,
-          stability: 0.5,
-          style_exaggeration: 0,
-        },
-
-        // LLM: custom endpoint (our backend)
-        llm_config: {
-          provider: "custom",
-          custom_llm_url: `${appUrl}/api/voice/bolna/llm`,
-          model: "custom",
-          max_tokens: 450,
-          temperature: 0.2,
-        },
-
-        // Engine config
-        engine_config: {
-          interruption_words: 2,
-          response_rate: "rapid",
-          endpointing_ms: 100,
-          linear_delay_ms: 200,
-          user_online_detection: {
-            enabled: true,
-            message: "Hey, are you still there?",
-            timeout_seconds: 9,
+        agent_prompts: {
+          task_1: {
+            system_prompt: agent.system_prompt || "",
           },
         },
-
-        // Call config
-        call_config: {
-          telephony_provider: "plivo",
-          noise_cancellation: true,
-          voicemail_detection: false,
-          hangup_on_silence: 10,
-          total_call_timeout: 300,
-        },
-
-        // Analytics
-        webhook_url: `${appUrl}/api/voice/bolna/webhook`,
-
-        ...(areaCode ? { area_code: areaCode } : {}),
       }),
     })
 
     const bolnaAgent = await createResponse.json()
+    console.log("[Bolna] Agent creation response:", JSON.stringify(bolnaAgent))
 
     const agentId = bolnaAgent.agent_id || bolnaAgent.id
-    const phoneNumber = bolnaAgent.phone_number || ""
-    const phoneNumberSid = bolnaAgent.phone_number_sid || phoneNumber
+    if (!agentId) {
+      throw new Error("Bolna agent creation did not return an agent_id")
+    }
+
+    // ── Step 2: Search for available phone numbers ────────────────────────────
+    const country = INDIAN_LANGUAGE_CODES.has(agent.voice_language) ? "IN" : "US"
+    const searchParams = new URLSearchParams({ country })
+    if (areaCode && country === "US") {
+      searchParams.set("pattern", String(areaCode).substring(0, 3))
+    }
+
+    let boughtNumber: { id: string; phone_number: string }
+
+    try {
+      const searchResponse = await bolnaFetch(`/phone-numbers/search?${searchParams}`)
+      const availableNumbers = await searchResponse.json() as Array<{
+        phone_number: string; region?: string; price?: number
+      }>
+
+      if (!Array.isArray(availableNumbers) || availableNumbers.length === 0) {
+        throw new Error(`No Bolna phone numbers available for country: ${country}`)
+      }
+
+      // ── Step 3: Buy the first available number ──────────────────────────────
+      const buyResponse = await bolnaFetch("/phone-numbers/buy", {
+        method: "POST",
+        body: JSON.stringify({ country, phone_number: availableNumbers[0].phone_number }),
+      })
+      boughtNumber = await buyResponse.json()
+      console.log("[Bolna] Phone number purchase response:", JSON.stringify(boughtNumber))
+    } catch (err) {
+      // Clean up the agent we just created so it doesn't become orphaned
+      try {
+        await bolnaFetch(`/v2/agent/${agentId}`, { method: "DELETE" })
+        console.log("[Bolna] Cleaned up orphaned agent:", agentId)
+      } catch (cleanupErr) {
+        console.error("[Bolna] Failed to clean up agent after number error:", cleanupErr)
+      }
+      throw err
+    }
+
+    // ── Step 4: Link the number to the agent for inbound calls ────────────────
+    const linkResponse = await bolnaFetch("/inbound/setup", {
+      method: "POST",
+      body: JSON.stringify({ agent_id: agentId, phone_number_id: boughtNumber.id }),
+    })
+    const linkResult = await linkResponse.json() as { phone_number?: string }
+    console.log("[Bolna] Inbound setup response:", JSON.stringify(linkResult))
 
     return {
       providerAgentId: agentId,
-      phoneNumber,
-      phoneNumberSid,
+      phoneNumber: linkResult.phone_number || boughtNumber.phone_number,
+      phoneNumberSid: boughtNumber.id,
       provider: "bolna",
     }
   }
 
   async releasePhoneNumber(
     providerAgentId: string,
-    _phoneNumberSid: string
+    phoneNumberSid: string
   ): Promise<void> {
-    await bolnaFetch(`/agent/${providerAgentId}`, {
-      method: "DELETE",
-    })
+    // Unlink the number from the agent first (best-effort)
+    if (phoneNumberSid) {
+      try {
+        await bolnaFetch("/inbound/unlink", {
+          method: "POST",
+          body: JSON.stringify({ phone_number_id: phoneNumberSid }),
+        })
+      } catch (e) {
+        console.error("[Bolna] Failed to unlink phone number:", e)
+      }
+
+      try {
+        await bolnaFetch(`/phone-numbers/${phoneNumberSid}`, { method: "DELETE" })
+      } catch (e) {
+        console.error("[Bolna] Failed to delete phone number:", e)
+      }
+    }
+
+    // Delete the agent
+    await bolnaFetch(`/v2/agent/${providerAgentId}`, { method: "DELETE" })
   }
 
   async updateAgentConfig(
     providerAgentId: string,
     config: VoiceAgentConfig
   ): Promise<void> {
-    const updatePayload: Record<string, unknown> = {}
-
-    if (config.voiceId) {
-      updatePayload.tts_config = {
-        provider: "elevenlabs",
-        voice: config.voiceId,
-        ...(config.speed ? { speed_rate: config.speed } : {}),
-      }
-    }
-
-    if (config.language) {
-      const langConfig = BOLNA_LANGUAGE_MAP[config.language] ||
-        BOLNA_LANGUAGE_MAP["hi-IN"]
-      updatePayload.asr_config = {
-        provider: "deepgram",
-        model: "nova-3",
-        language: langConfig.asr,
-      }
-      updatePayload.language = langConfig.language
-      if (!updatePayload.tts_config) {
-        updatePayload.tts_config = { provider: "elevenlabs" }
-      }
-      ;(updatePayload.tts_config as Record<string, string>).language =
-        langConfig.tts
-    }
+    const agentConfigPatch: Record<string, unknown> = {}
+    const agentPromptsPatch: Record<string, unknown> = {}
+    const toolsConfigPatch: Record<string, unknown> = {}
 
     if (config.welcomeMessage) {
-      updatePayload.agent_welcome_message = config.welcomeMessage
+      agentConfigPatch.agent_welcome_message = config.welcomeMessage
     }
 
     if (config.systemPrompt) {
-      updatePayload.agent_prompt = config.systemPrompt
+      agentPromptsPatch.task_1 = { system_prompt: config.systemPrompt }
     }
 
-    if (config.engineConfig) {
-      const ec = config.engineConfig
-      updatePayload.engine_config = {
-        ...(ec.interruptionWords != null
-          ? { interruption_words: ec.interruptionWords }
-          : {}),
-        ...(ec.responseRate ? { response_rate: ec.responseRate } : {}),
-        ...(ec.endpointingMs != null
-          ? { endpointing_ms: ec.endpointingMs }
-          : {}),
-        ...(ec.linearDelayMs != null
-          ? { linear_delay_ms: ec.linearDelayMs }
-          : {}),
-        ...(ec.userOnlineDetection
-          ? {
-              user_online_detection: {
-                enabled: ec.userOnlineDetection.enabled,
-                message: ec.userOnlineDetection.message,
-                timeout_seconds: ec.userOnlineDetection.timeoutSeconds,
-              },
-            }
-          : {}),
+    if (config.voiceId || config.speed || config.language) {
+      const synthPatch: Record<string, unknown> = {
+        provider: "elevenlabs",
+        provider_config: {
+          ...(config.voiceId ? { voice: config.voiceId, voice_id: config.voiceId } : {}),
+          ...(config.speed ? { speed: config.speed } : {}),
+        },
       }
-    }
-
-    if (config.callConfig) {
-      const cc = config.callConfig
-      updatePayload.call_config = {
-        ...(cc.telephonyProvider
-          ? { telephony_provider: cc.telephonyProvider }
-          : {}),
-        ...(cc.noiseCancellation != null
-          ? { noise_cancellation: cc.noiseCancellation }
-          : {}),
-        ...(cc.voicemailDetection != null
-          ? { voicemail_detection: cc.voicemailDetection }
-          : {}),
-        ...(cc.hangupOnSilence != null
-          ? { hangup_on_silence: cc.hangupOnSilence }
-          : {}),
-        ...(cc.totalCallTimeout != null
-          ? { total_call_timeout: cc.totalCallTimeout }
-          : {}),
+      if (config.language) {
+        const langConfig = BOLNA_LANGUAGE_MAP[config.language] ||
+          BOLNA_LANGUAGE_MAP["hi-IN"]
+        ;(synthPatch.provider_config as Record<string, unknown>).language = langConfig.tts
+        toolsConfigPatch.transcriber = {
+          provider: "deepgram",
+          model: "nova-3",
+          language: langConfig.asr,
+          stream: true,
+          encoding: "linear16",
+        }
       }
+      toolsConfigPatch.synthesizer = synthPatch
     }
 
-    if (Object.keys(updatePayload).length > 0) {
-      await bolnaFetch(`/agent/${providerAgentId}`, {
+    if (Object.keys(toolsConfigPatch).length > 0) {
+      agentConfigPatch.tasks = [
+        { task_type: "conversation", tools_config: toolsConfigPatch },
+      ]
+    }
+
+    const hasConfigChanges = Object.keys(agentConfigPatch).length > 0
+    const hasPromptChanges = Object.keys(agentPromptsPatch).length > 0
+
+    if (hasConfigChanges || hasPromptChanges) {
+      await bolnaFetch(`/v2/agent/${providerAgentId}`, {
         method: "PUT",
-        body: JSON.stringify(updatePayload),
+        body: JSON.stringify({
+          ...(hasConfigChanges ? { agent_config: agentConfigPatch } : {}),
+          ...(hasPromptChanges ? { agent_prompts: agentPromptsPatch } : {}),
+        }),
       })
     }
   }

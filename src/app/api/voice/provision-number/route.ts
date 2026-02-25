@@ -26,9 +26,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result)
   } catch (error) {
     console.error("Provision phone number error:", error)
-    return NextResponse.json(
-      { error: "Failed to provision phone number" },
-      { status: 500 }
-    )
+    const message = error instanceof Error ? error.message : "Failed to provision phone number"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

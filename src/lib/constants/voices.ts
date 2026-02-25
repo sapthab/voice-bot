@@ -118,10 +118,10 @@ export const VOICE_OPTIONS: VoiceOption[] = [
     persona: "Confident and articulate",
     provider: "retell",
   },
-  // Bolna voices (ElevenLabs voices configured in Bolna)
+  // Bolna voices — real ElevenLabs voice IDs
   {
-    id: "bolna-anita",
-    name: "Anita",
+    id: "V9LCAAi4tTlqe9JadbCo", // Nila (ElevenLabs)
+    name: "Nila",
     gender: "female",
     accent: "Indian",
     languages: ["hi-IN", "ta-IN", "te-IN", "bn-IN", "mr-IN"],
@@ -129,8 +129,8 @@ export const VOICE_OPTIONS: VoiceOption[] = [
     provider: "bolna",
   },
   {
-    id: "bolna-vikram",
-    name: "Vikram",
+    id: "CZdRaSQ51p0onta4eec8", // Akshay (ElevenLabs)
+    name: "Akshay",
     gender: "male",
     accent: "Indian",
     languages: ["hi-IN", "ta-IN", "te-IN", "bn-IN", "mr-IN"],
@@ -152,9 +152,11 @@ export function getVoicesForLanguage(
   if (voices.length > 0) return voices
 
   // Fallback to English voices for languages without native voices
-  let fallback = VOICE_OPTIONS.filter((v) => v.languages.includes("en-US"))
+  const fallback = VOICE_OPTIONS.filter((v) => v.languages.includes("en-US"))
   if (providerFilter) {
-    fallback = fallback.filter((v) => !v.provider || v.provider === providerFilter)
+    const filteredFallback = fallback.filter((v) => !v.provider || v.provider === providerFilter)
+    // Only apply provider filter to fallback if it would still yield results
+    if (filteredFallback.length > 0) return filteredFallback
   }
   return fallback
 }
@@ -164,7 +166,9 @@ export function getDefaultVoiceForLanguage(
   providerFilter?: "retell" | "bolna"
 ): VoiceOption {
   const voices = getVoicesForLanguage(languageCode, providerFilter)
-  return voices[0]
+  // voices[0] is always defined because getVoicesForLanguage guarantees a non-empty list,
+  // but fall back to VOICE_OPTIONS[0] as a last resort to prevent crashes
+  return voices[0] ?? VOICE_OPTIONS[0]
 }
 
 export function hasNativeVoice(

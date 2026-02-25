@@ -233,7 +233,7 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
                   <p className="text-sm text-muted-foreground">
                     Phone Number:{" "}
                     <span className="font-mono font-medium">
-                      {voiceStatus?.phone_number || agent.phone_number || "Loading..."}
+                      {phoneNumber || "Not assigned"}
                     </span>
                   </p>
                 </div>
@@ -274,14 +274,16 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
                 </div>
               )}
 
-              <div className="p-3 rounded-lg bg-muted/50 text-sm">
-                <p className="font-medium mb-1">Call Forwarding</p>
-                <p className="text-muted-foreground">
-                  Forward your business phone to{" "}
-                  <span className="font-mono">{voiceStatus?.phone_number || agent.phone_number}</span>{" "}
-                  so the AI answers when you&apos;re unavailable.
-                </p>
-              </div>
+              {phoneNumber && (
+                <div className="p-3 rounded-lg bg-muted/50 text-sm">
+                  <p className="font-medium mb-1">Call Forwarding</p>
+                  <p className="text-muted-foreground">
+                    Forward your business phone to{" "}
+                    <span className="font-mono">{phoneNumber}</span>{" "}
+                    so the AI answers when you&apos;re unavailable.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-6 space-y-4">
@@ -450,8 +452,10 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
             <div className="space-y-1">
               <p className="text-sm font-medium">Enable inbound SMS</p>
               <p className="text-sm text-muted-foreground">
-                {isVoiceEnabled
+                {isVoiceEnabled && phoneNumber
                   ? `Receive SMS on ${phoneNumber} and reply with AI`
+                  : isVoiceEnabled
+                  ? "Assign a phone number in your voice provider dashboard to enable SMS"
                   : "Provision a phone number first to enable SMS"}
               </p>
             </div>

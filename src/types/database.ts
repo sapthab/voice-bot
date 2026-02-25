@@ -133,10 +133,16 @@ export interface Database {
           voice_language: string
           voice_speed: number
           voice_welcome_message: string
-          voice_provider: 'retell'
+          voice_provider: 'retell' | 'bolna'
+          bolna_agent_id: string | null
           language: string
           booking_enabled: boolean
           booking_settings: Json | null
+          doc_similarity_threshold: number
+          faq_similarity_threshold: number
+          sms_enabled: boolean
+          escalation_email: string | null
+          escalation_phone: string | null
           created_at: string
           updated_at: string
         }
@@ -167,10 +173,16 @@ export interface Database {
           voice_language?: string
           voice_speed?: number
           voice_welcome_message?: string
-          voice_provider?: 'retell'
+          voice_provider?: 'retell' | 'bolna'
+          bolna_agent_id?: string | null
           language?: string
           booking_enabled?: boolean
           booking_settings?: Json | null
+          doc_similarity_threshold?: number
+          faq_similarity_threshold?: number
+          sms_enabled?: boolean
+          escalation_email?: string | null
+          escalation_phone?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -201,10 +213,16 @@ export interface Database {
           voice_language?: string
           voice_speed?: number
           voice_welcome_message?: string
-          voice_provider?: 'retell'
+          voice_provider?: 'retell' | 'bolna'
+          bolna_agent_id?: string | null
           language?: string
           booking_enabled?: boolean
           booking_settings?: Json | null
+          doc_similarity_threshold?: number
+          faq_similarity_threshold?: number
+          sms_enabled?: boolean
+          escalation_email?: string | null
+          escalation_phone?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -333,6 +351,7 @@ export interface Database {
           escalated: boolean
           escalation_reason: string | null
           post_processing_status: 'pending' | 'processing' | 'completed' | 'failed' | null
+          voice_provider: string | null
           created_at: string
         }
         Insert: {
@@ -356,6 +375,7 @@ export interface Database {
           escalated?: boolean
           escalation_reason?: string | null
           post_processing_status?: 'pending' | 'processing' | 'completed' | 'failed' | null
+          voice_provider?: string | null
           created_at?: string
         }
         Update: {
@@ -379,6 +399,7 @@ export interface Database {
           escalated?: boolean
           escalation_reason?: string | null
           post_processing_status?: 'pending' | 'processing' | 'completed' | 'failed' | null
+          voice_provider?: string | null
           created_at?: string
         }
       }
@@ -667,6 +688,9 @@ export interface Database {
           error_message: string | null
           recipient: string
           sent_at: string | null
+          scheduled_for: string
+          rendered_body: string | null
+          rendered_subject: string | null
           created_at: string
         }
         Insert: {
@@ -678,6 +702,9 @@ export interface Database {
           error_message?: string | null
           recipient: string
           sent_at?: string | null
+          scheduled_for?: string
+          rendered_body?: string | null
+          rendered_subject?: string | null
           created_at?: string
         }
         Update: {
@@ -689,6 +716,9 @@ export interface Database {
           error_message?: string | null
           recipient?: string
           sent_at?: string | null
+          scheduled_for?: string
+          rendered_body?: string | null
+          rendered_subject?: string | null
           created_at?: string
         }
       }

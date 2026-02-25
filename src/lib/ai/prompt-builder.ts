@@ -4,6 +4,7 @@ import { getLanguageByCode, isEnglish } from "@/lib/constants/languages"
 interface PromptContext {
   ragContext: string
   conversationType?: "chat" | "voice"
+  escalationNote?: string
 }
 
 function buildLanguageInstruction(agent: Agent): string {
@@ -40,6 +41,10 @@ You can check calendar availability and book appointments for customers.
 - Do not make up information that isn't provided in the context above
 - Use markdown formatting when it improves readability`
 
+  if (context.escalationNote) {
+    systemPrompt += context.escalationNote
+  }
+
   systemPrompt += buildLanguageInstruction(agent)
 
   return systemPrompt
@@ -67,6 +72,10 @@ export function buildVoiceSystemPrompt(agent: Agent, context: PromptContext): st
 - Do not make up information not provided in the context
 - Spell out numbers and abbreviations naturally
 - Avoid saying "as an AI" or referencing that you are artificial`
+
+  if (context.escalationNote) {
+    systemPrompt += context.escalationNote
+  }
 
   systemPrompt += buildLanguageInstruction(agent)
 

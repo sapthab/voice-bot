@@ -18,6 +18,11 @@ export const SUPPORTED_LANGUAGES: Language[] = [
   { code: "ja-JP", name: "Japanese", nativeName: "日本語", flag: "🇯🇵" },
   { code: "ko-KR", name: "Korean", nativeName: "한국어", flag: "🇰🇷" },
   { code: "zh-CN", name: "Chinese (Simplified)", nativeName: "中文", flag: "🇨🇳" },
+  { code: "hi-IN", name: "Hindi", nativeName: "हिन्दी", flag: "🇮🇳" },
+  { code: "ta-IN", name: "Tamil", nativeName: "தமிழ்", flag: "🇮🇳" },
+  { code: "te-IN", name: "Telugu", nativeName: "తెలుగు", flag: "🇮🇳" },
+  { code: "bn-IN", name: "Bengali", nativeName: "বাংলা", flag: "🇮🇳" },
+  { code: "mr-IN", name: "Marathi", nativeName: "मराठी", flag: "🇮🇳" },
 ]
 
 export function getLanguageByCode(code: string): Language | undefined {
@@ -26,4 +31,8 @@ export function getLanguageByCode(code: string): Language | undefined {
 
 export function isEnglish(code: string): boolean {
   return code.startsWith("en")
+}
+
+export function isIndianLanguage(code: string): boolean {
+  return code.endsWith("-IN") && !code.startsWith("en")
 }

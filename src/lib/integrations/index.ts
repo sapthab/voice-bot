@@ -9,6 +9,7 @@ export type IntegrationEvent =
   | "call_completed"
   | "chat_completed"
   | "appointment_booked"
+  | "escalation_detected"
 
 interface EventContext {
   agentId: string

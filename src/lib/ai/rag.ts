@@ -20,14 +20,23 @@ interface RAGContext {
   faqs: RetrievedFAQ[]
 }
 
+interface ThresholdOverrides {
+  docThreshold?: number
+  faqThreshold?: number
+}
+
 export async function retrieveContext(
   query: string,
-  agentId: string
+  agentId: string,
+  overrides?: ThresholdOverrides
 ): Promise<RAGContext> {
   const supabase = await createAdminClient()
 
   // Generate embedding for the query
   const queryEmbedding = await generateEmbedding(query)
+
+  const docThreshold = overrides?.docThreshold ?? 0.7
+  const faqThreshold = overrides?.faqThreshold ?? 0.8
 
   // Search for relevant documents
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,7 +45,7 @@ export async function retrieveContext(
     {
       query_embedding: queryEmbedding,
       p_agent_id: agentId,
-      match_threshold: 0.7,
+      match_threshold: docThreshold,
       match_count: 5,
     }
   )
@@ -50,7 +59,7 @@ export async function retrieveContext(
   const { data: faqs, error: faqError } = await (supabase as any).rpc("match_faqs", {
     query_embedding: queryEmbedding,
     p_agent_id: agentId,
-    match_threshold: 0.8,
+    match_threshold: faqThreshold,
     match_count: 3,
   })
 

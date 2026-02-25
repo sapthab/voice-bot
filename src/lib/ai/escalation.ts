@@ -40,6 +40,37 @@ const VERTICAL_TRIGGERS: Record<string, { pattern: RegExp; reason: string }[]> =
   ],
 }
 
+/**
+ * Build the system-prompt snippet the AI should follow when a conversation
+ * has been escalated. Informs the AI to acknowledge and hand off.
+ */
+export function buildEscalationSystemNote(
+  agent: { name: string; escalation_email?: string | null; escalation_phone?: string | null },
+  reason: string,
+  conversationType: "chat" | "voice" = "chat"
+): string {
+  const contacts: string[] = []
+  if (agent.escalation_email) contacts.push(`email: ${agent.escalation_email}`)
+  if (agent.escalation_phone) contacts.push(`phone: ${agent.escalation_phone}`)
+
+  const contactLine =
+    contacts.length > 0
+      ? `Provide the customer with these contact details: ${contacts.join(" or ")}.`
+      : "Let the customer know a team member will follow up with them shortly."
+
+  if (conversationType === "voice") {
+    return `\n\nESCALATION: This caller requires human assistance (${reason}). Tell them you are connecting them with a team member and keep your response brief and reassuring. ${contactLine}`
+  }
+
+  return `\n\n## Escalation Required
+The customer's message has triggered an escalation (${reason}).
+You MUST:
+1. Acknowledge their concern with empathy
+2. Clearly let them know they will be connected with a human team member
+3. ${contactLine}
+4. Do not attempt to resolve this yourself — this requires human attention`
+}
+
 export function checkEscalation(message: string, vertical: Vertical): EscalationResult {
   // Check universal triggers
   for (const trigger of UNIVERSAL_TRIGGERS) {

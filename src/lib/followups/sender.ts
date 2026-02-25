@@ -6,7 +6,10 @@ import { sendEmail } from "./email"
 
 /**
  * Process follow-ups for a completed conversation.
- * Checks for enabled follow-up configs and sends them.
+ * Immediate follow-ups (delay_minutes = 0) are sent right away.
+ * Delayed follow-ups are scheduled in followup_deliveries with a
+ * scheduled_for timestamp; the /api/internal/process-followups cron
+ * picks them up once they come due.
  */
 export async function processFollowups(
   conversationId: string,
@@ -15,7 +18,6 @@ export async function processFollowups(
 ) {
   const supabase = await createAdminClient()
 
-  // Get follow-up configs for this agent
   const { data: configs } = await supabase
     .from("followup_configs")
     .select("*")
@@ -24,7 +26,6 @@ export async function processFollowups(
 
   if (!configs || configs.length === 0) return
 
-  // Get lead info if available
   let lead: Record<string, unknown> | null = null
   if (conversation.lead_id) {
     const { data: leadData } = await supabase
@@ -35,10 +36,8 @@ export async function processFollowups(
     lead = leadData as Record<string, unknown> | null
   }
 
-  // Get conversation summary
   const summary = await getConversationSummary(conversationId)
 
-  // Build template variables
   const variables: TemplateVariables = {
     customer_name: (lead?.name as string) || "Valued Customer",
     business_name: (agent.name as string) || "Our Business",
@@ -51,13 +50,6 @@ export async function processFollowups(
   for (const config of configs as Array<Record<string, unknown>>) {
     const channel = config.channel as string
     const delayMinutes = (config.delay_minutes as number) || 0
-
-    // For delayed follow-ups, we'd need a queue system.
-    // For now, if delay > 0, skip (in production, use a job queue)
-    if (delayMinutes > 0) {
-      console.log(`[Followups] Skipping delayed follow-up (${delayMinutes}m) for ${conversationId}`)
-      continue
-    }
 
     // Resolve recipient
     let recipient = ""
@@ -72,13 +64,30 @@ export async function processFollowups(
       continue
     }
 
-    // Interpolate template
-    const body = interpolate(config.template_body as string, variables)
-    const subject = config.template_subject
+    // Render template now so it reflects the conversation context
+    const renderedBody = interpolate(config.template_body as string, variables)
+    const renderedSubject = config.template_subject
       ? interpolate(config.template_subject as string, variables)
       : undefined
 
-    // Create delivery record
+    if (delayMinutes > 0) {
+      // Schedule for later — the process-followups cron will send it
+      const scheduledFor = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("followup_deliveries") as any).insert({
+        followup_config_id: config.id,
+        conversation_id: conversationId,
+        recipient,
+        status: "pending",
+        scheduled_for: scheduledFor,
+        rendered_body: renderedBody,
+        rendered_subject: renderedSubject || null,
+      })
+      console.log(`[Followups] Scheduled ${channel} follow-up for ${recipient} at ${scheduledFor}`)
+      continue
+    }
+
+    // Immediate delivery (delay_minutes === 0)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: delivery } = await (supabase.from("followup_deliveries") as any)
       .insert({
@@ -86,21 +95,23 @@ export async function processFollowups(
         conversation_id: conversationId,
         recipient,
         status: "pending",
+        scheduled_for: new Date().toISOString(),
+        rendered_body: renderedBody,
+        rendered_subject: renderedSubject || null,
       })
       .select()
       .single()
 
     const deliveryId = delivery?.id
 
-    // Send
     let result: { success: boolean; messageId?: string; error?: string }
     if (channel === "sms") {
-      result = await sendSMS({ to: recipient, body })
+      result = await sendSMS({ to: recipient, body: renderedBody })
     } else if (channel === "email") {
       result = await sendEmail({
         to: recipient,
-        subject: subject || `Follow-up from ${variables.business_name}`,
-        body,
+        subject: renderedSubject || `Follow-up from ${variables.business_name}`,
+        body: renderedBody,
         fromName: (config.from_name as string) || undefined,
         fromEmail: (config.from_email as string) || undefined,
       })
@@ -108,7 +119,6 @@ export async function processFollowups(
       result = { success: false, error: `Unknown channel: ${channel}` }
     }
 
-    // Update delivery record
     if (deliveryId) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase.from("followup_deliveries") as any)

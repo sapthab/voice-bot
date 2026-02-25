@@ -4,6 +4,7 @@ import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
+import { getVoiceTools, executeVoiceTool } from "./src/lib/voice/tool-definitions";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "3000", 10);
@@ -50,106 +51,58 @@ interface ConnectionState {
   systemPrompt?: string;
   fallbackMessage?: string;
   conversationId?: string;
+  escalated?: boolean;
 }
 
 // ---------------------------------------------------------------------------
-// Tool execution for voice (standalone — cannot import @/ modules here)
+// Inline escalation detection (mirrors src/lib/ai/escalation.ts patterns)
+// Cannot import @/ modules in server.ts — patterns kept in sync manually.
 // ---------------------------------------------------------------------------
 
-interface VoiceToolDefinition {
-  type: "function";
-  function: {
-    name: string;
-    description: string;
-    parameters: Record<string, any>;
-  };
-}
+const ESCALATION_TRIGGERS = [
+  { pattern: /\b(emergency|urgent|911|police|fire department|ambulance)\b/i, reason: "Emergency mentioned" },
+  { pattern: /\b(speak to|talk to|transfer to|connect me with)\s+(a\s+)?(human|person|agent|manager|supervisor|representative)\b/i, reason: "Requested human agent" },
+  { pattern: /\b(sue|lawsuit|legal action|attorney|lawyer)\b/i, reason: "Legal threat" },
+  { pattern: /\b(complaint|complain|report|BBB|better business)\b/i, reason: "Complaint filed" },
+  { pattern: /\b(gas leak|carbon monoxide|flooding|burst pipe|electrical fire)\b/i, reason: "Home emergency" },
+  { pattern: /\b(chest pain|difficulty breathing|stroke|heart attack|unconscious|seizure|suicide|self.?harm)\b/i, reason: "Medical emergency" },
+  { pattern: /\b(overdose|poisoning|severe bleeding|food poisoning)\b/i, reason: "Medical emergency" },
+  { pattern: /\b(fraud|unauthorized charge|identity theft|stolen card)\b/i, reason: "Fraud/security issue" },
+];
 
-/**
- * Get tools available for a voice agent based on enabled features.
- * This mirrors src/lib/ai/tools/index.ts but works in the standalone server context.
- */
-function getVoiceTools(agentData: Record<string, any>): VoiceToolDefinition[] {
-  const tools: VoiceToolDefinition[] = [];
-
-  if (agentData.booking_enabled) {
-    tools.push({
-      type: "function",
-      function: {
-        name: "check_availability",
-        description:
-          "Check calendar availability for appointment booking. Returns available time slots.",
-        parameters: {
-          type: "object",
-          properties: {
-            date: {
-              type: "string",
-              description: "The date to check availability for (YYYY-MM-DD format)",
-            },
-            duration_minutes: {
-              type: "number",
-              description: "Duration of the appointment in minutes (default: 30)",
-            },
-          },
-          required: ["date"],
-        },
-      },
-    });
-    tools.push({
-      type: "function",
-      function: {
-        name: "book_appointment",
-        description: "Book an appointment at a specific time slot.",
-        parameters: {
-          type: "object",
-          properties: {
-            start_time: {
-              type: "string",
-              description: "Start time in ISO 8601 format",
-            },
-            customer_name: { type: "string", description: "Customer's name" },
-            customer_email: { type: "string", description: "Customer's email" },
-            customer_phone: { type: "string", description: "Customer's phone number" },
-            notes: { type: "string", description: "Any notes for the appointment" },
-          },
-          required: ["start_time", "customer_name"],
-        },
-      },
-    });
+function checkEscalationInline(message: string): { shouldEscalate: boolean; reason: string | null } {
+  for (const t of ESCALATION_TRIGGERS) {
+    if (t.pattern.test(message)) return { shouldEscalate: true, reason: t.reason };
   }
-
-  return tools;
+  return { shouldEscalate: false, reason: null };
 }
 
-/**
- * Execute a tool in the voice context by calling the internal API.
- * This allows the standalone server.ts to use the same tool logic as the Next.js app.
- */
-async function executeVoiceTool(
-  toolName: string,
-  args: Record<string, any>,
-  agentId: string,
-  conversationId: string
-): Promise<{ success: boolean; data?: any; error?: string; message?: string }> {
+function buildEscalationVoiceNote(agentData: Record<string, any>, reason: string): string {
+  const contacts: string[] = [];
+  if (agentData.escalation_email) contacts.push(`email: ${agentData.escalation_email}`);
+  if (agentData.escalation_phone) contacts.push(`phone: ${agentData.escalation_phone}`);
+  const contactLine = contacts.length > 0
+    ? `Tell them to reach us at: ${contacts.join(" or ")}.`
+    : "Let them know a team member will follow up.";
+  return `\n\nESCALATION: This caller requires human assistance (${reason}). Tell them you are connecting them with a team member and keep your response brief and reassuring. ${contactLine}`;
+}
+
+async function triggerEscalationSideEffects(
+  conversationId: string,
+  reason: string,
+  agentId: string
+): Promise<void> {
   try {
-    const baseUrl = `http://localhost:${port}`;
-    const response = await fetch(`${baseUrl}/api/internal/execute-tool`, {
+    await fetch(`http://localhost:${port}/api/internal/handle-escalation`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-internal-secret": process.env.INTERNAL_API_SECRET || "",
       },
-      body: JSON.stringify({ toolName, args, agentId, conversationId }),
+      body: JSON.stringify({ conversationId, reason, agentId, channel: "voice" }),
     });
-
-    if (!response.ok) {
-      return { success: false, error: `Tool API returned ${response.status}` };
-    }
-
-    return await response.json();
-  } catch (error: any) {
-    console.error(`[WS] Tool execution error (${toolName}):`, error);
-    return { success: false, error: error.message || "Tool execution failed" };
+  } catch (err) {
+    console.error("[WS] Escalation side-effects failed:", err);
   }
 }
 
@@ -165,21 +118,28 @@ async function generateEmbedding(text: string): Promise<number[]> {
   return response.data[0].embedding;
 }
 
-async function retrieveContext(query: string, agentId: string) {
+async function retrieveContext(
+  query: string,
+  agentId: string,
+  overrides?: { docThreshold?: number; faqThreshold?: number }
+) {
   const queryEmbedding = await generateEmbedding(query);
+
+  const docThreshold = overrides?.docThreshold ?? 0.7;
+  const faqThreshold = overrides?.faqThreshold ?? 0.8;
 
   const sb = getSupabase();
   const [docResult, faqResult] = await Promise.all([
     (sb as any).rpc("match_documents", {
       query_embedding: queryEmbedding,
       p_agent_id: agentId,
-      match_threshold: 0.7,
+      match_threshold: docThreshold,
       match_count: 5,
     }),
     (sb as any).rpc("match_faqs", {
       query_embedding: queryEmbedding,
       p_agent_id: agentId,
-      match_threshold: 0.8,
+      match_threshold: faqThreshold,
       match_count: 3,
     }),
   ]);
@@ -411,15 +371,30 @@ function handleRetellConnection(ws: WebSocket, callId: string) {
           .eq("conversation_id", state.conversationId)
           .order("created_at", { ascending: true });
 
+        // Check for escalation (only on first trigger per call)
+        let escalationNote = "";
+        if (!state.escalated) {
+          const escalation = checkEscalationInline(userMessage);
+          if (escalation.shouldEscalate) {
+            state.escalated = true;
+            escalationNote = buildEscalationVoiceNote(state.agentData || {}, escalation.reason!);
+            // Fire-and-forget: update DB + notify + dispatch event
+            triggerEscalationSideEffects(state.conversationId!, escalation.reason!, state.agentId!);
+          }
+        }
+
         // RAG context
-        const context = await retrieveContext(userMessage, state.agentId);
+        const context = await retrieveContext(userMessage, state.agentId, {
+          docThreshold: state.agentData?.doc_similarity_threshold,
+          faqThreshold: state.agentData?.faq_similarity_threshold,
+        });
         const contextPrompt = buildContextPrompt(context);
         const systemPrompt = buildVoiceSystemPrompt(
           state.agentName || "Assistant",
           state.systemPrompt || "",
           contextPrompt,
           state.agentData
-        );
+        ) + escalationNote;
 
         // Build messages array
         type ChatMsg = { role: "system" | "user" | "assistant" | "tool"; content: string; tool_calls?: any[]; tool_call_id?: string };
@@ -501,7 +476,8 @@ function handleRetellConnection(ws: WebSocket, callId: string) {
               toolCall.function.name,
               args,
               state.agentId!,
-              state.conversationId!
+              state.conversationId!,
+              `http://localhost:${port}`
             );
 
             messages.push({

@@ -18,8 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Loader2, Phone, PhoneOff, PhoneCall, AlertCircle } from "lucide-react"
-import { SUPPORTED_LANGUAGES } from "@/lib/constants/languages"
+import { Loader2, Phone, PhoneOff, PhoneCall, AlertCircle, MessageSquare } from "lucide-react"
+import { SUPPORTED_LANGUAGES, isIndianLanguage } from "@/lib/constants/languages"
 import { getVoicesForLanguage, getDefaultVoiceForLanguage, hasNativeVoice } from "@/lib/constants/voices"
 
 interface VoiceSettingsProps {
@@ -30,10 +30,12 @@ interface VoiceStatus {
   voice_enabled: boolean
   phone_number: string | null
   retell_agent_id: string | null
+  bolna_agent_id: string | null
   voice_id: string | null
   voice_language: string
   voice_speed: number
   voice_welcome_message: string
+  voice_provider: "retell" | "bolna"
   stats: {
     totalCalls: number
     completedCalls: number
@@ -47,6 +49,13 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
   const [provisioning, setProvisioning] = useState(false)
   const [releasing, setReleasing] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null)
+  const [smsEnabled, setSmsEnabled] = useState<boolean>(
+    (agent as Record<string, unknown>).sms_enabled as boolean ?? false
+  )
+  const [togglingSSMS, setTogglingSSMS] = useState(false)
+  const [selectedProvider, setSelectedProvider] = useState<"retell" | "bolna">(
+    agent.voice_provider || "retell"
+  )
   const [settings, setSettings] = useState({
     voice_id: agent.voice_id || "11labs-Adrian",
     voice_language: agent.voice_language || "en-US",
@@ -57,8 +66,8 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
     language: (agent as Record<string, unknown>).language as string || "en-US",
   })
 
-  const filteredVoices = getVoicesForLanguage(settings.voice_language)
-  const showNoNativeVoiceWarning = !hasNativeVoice(settings.voice_language)
+  const filteredVoices = getVoicesForLanguage(settings.voice_language, selectedProvider)
+  const showNoNativeVoiceWarning = !hasNativeVoice(settings.voice_language, selectedProvider)
 
   useEffect(() => {
     fetchVoiceStatus()
@@ -70,6 +79,9 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
       if (response.ok) {
         const data = await response.json()
         setVoiceStatus(data)
+        if (data.voice_provider) {
+          setSelectedProvider(data.voice_provider)
+        }
       }
     } catch (error) {
       console.error("Failed to fetch voice status:", error)
@@ -77,11 +89,25 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
   }
 
   const handleLanguageChange = (value: string) => {
-    const defaultVoice = getDefaultVoiceForLanguage(value)
+    // Auto-switch provider when selecting an Indian language
+    const newProvider = isIndianLanguage(value) ? "bolna" : "retell"
+    setSelectedProvider(newProvider)
+
+    const defaultVoice = getDefaultVoiceForLanguage(value, newProvider)
     setSettings((s) => ({
       ...s,
       voice_language: value,
       language: value,
+      voice_id: defaultVoice.id,
+    }))
+  }
+
+  const handleProviderChange = (value: "retell" | "bolna") => {
+    setSelectedProvider(value)
+    // Re-filter voices for the new provider
+    const defaultVoice = getDefaultVoiceForLanguage(settings.voice_language, value)
+    setSettings((s) => ({
+      ...s,
       voice_id: defaultVoice.id,
     }))
   }
@@ -92,7 +118,10 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
       const response = await fetch("/api/voice/provision-number", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentId: agent.id }),
+        body: JSON.stringify({
+          agentId: agent.id,
+          provider: selectedProvider,
+        }),
       })
 
       if (!response.ok) {
@@ -137,7 +166,10 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
       const response = await fetch(`/api/agents/${agent.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify({
+          ...settings,
+          voice_provider: selectedProvider,
+        }),
       })
 
       if (!response.ok) throw new Error("Failed to save")
@@ -152,6 +184,26 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
   }
 
   const isVoiceEnabled = voiceStatus?.voice_enabled || agent.voice_enabled
+  const phoneNumber = voiceStatus?.phone_number || agent.phone_number
+
+  const handleToggleSMS = async (enabled: boolean) => {
+    setTogglingSSMS(true)
+    try {
+      const response = await fetch(`/api/agents/${agent.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sms_enabled: enabled }),
+      })
+      if (!response.ok) throw new Error("Failed to update SMS setting")
+      setSmsEnabled(enabled)
+      toast.success(enabled ? "SMS channel enabled" : "SMS channel disabled")
+      router.refresh()
+    } catch {
+      toast.error("Failed to update SMS setting")
+    } finally {
+      setTogglingSSMS(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -174,6 +226,9 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
                   <div className="flex items-center gap-2">
                     <Badge variant="success">Active</Badge>
                     <span className="text-sm font-medium">Voice Enabled</span>
+                    <Badge variant="outline" className="text-xs">
+                      {voiceStatus?.voice_provider || agent.voice_provider || "retell"}
+                    </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Phone Number:{" "}
@@ -263,6 +318,31 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
+            <Label>Voice Provider</Label>
+            <Select
+              value={selectedProvider}
+              onValueChange={(value) => handleProviderChange(value as "retell" | "bolna")}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select provider" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="retell">
+                  Retell (US/EU - Twilio telephony)
+                </SelectItem>
+                <SelectItem value="bolna">
+                  Bolna (India - Exotel/Plivo telephony)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {selectedProvider === "bolna"
+                ? "Optimized for Indian languages with local telephony"
+                : "Best for US/EU with ElevenLabs voices"}
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label>Language</Label>
             <Select
               value={settings.voice_language}
@@ -351,6 +431,57 @@ export function VoiceSettings({ agent }: VoiceSettingsProps) {
               This is the first thing callers hear when the AI answers
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* SMS Channel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            SMS Channel
+          </CardTitle>
+          <CardDescription>
+            Let customers text your agent using the same phone number
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Enable inbound SMS</p>
+              <p className="text-sm text-muted-foreground">
+                {isVoiceEnabled
+                  ? `Receive SMS on ${phoneNumber} and reply with AI`
+                  : "Provision a phone number first to enable SMS"}
+              </p>
+            </div>
+            {togglingSSMS ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Switch
+                checked={smsEnabled}
+                onCheckedChange={handleToggleSMS}
+                disabled={!isVoiceEnabled}
+              />
+            )}
+          </div>
+
+          {smsEnabled && isVoiceEnabled && (
+            <div className="rounded-lg border p-3 space-y-2 text-sm">
+              <p className="font-medium">Twilio webhook configuration</p>
+              <p className="text-muted-foreground">
+                In your Twilio console, set the SMS webhook URL for{" "}
+                <span className="font-mono">{phoneNumber}</span> to:
+              </p>
+              <code className="block bg-muted px-2 py-1 rounded text-xs break-all">
+                {process.env.NEXT_PUBLIC_APP_URL || "https://your-domain.com"}/api/sms/webhook
+              </code>
+              <p className="text-muted-foreground text-xs">
+                Method: HTTP POST &nbsp;·&nbsp; Ensure{" "}
+                <span className="font-mono">TWILIO_AUTH_TOKEN</span> is set in your environment.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

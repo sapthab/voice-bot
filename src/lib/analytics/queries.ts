@@ -225,6 +225,34 @@ export async function getPerformanceData(agentId: string | null, orgId: string, 
   return counts
 }
 
+export async function getSatisfactionData(agentId: string | null, orgId: string, range: DateRange) {
+  const supabase = await createAdminClient()
+
+  const agentIds = await resolveAgentIds(supabase, agentId, orgId)
+
+  const { data } = await supabase
+    .from("conversations")
+    .select("satisfaction_rating, created_at")
+    .in("agent_id", agentIds)
+    .gte("created_at", range.from)
+    .lte("created_at", range.to)
+    .not("satisfaction_rating", "is", null)
+
+  const rows = (data || []) as Array<{ satisfaction_rating: number; created_at: string }>
+
+  const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  let sum = 0
+  for (const row of rows) {
+    distribution[row.satisfaction_rating] = (distribution[row.satisfaction_rating] || 0) + 1
+    sum += row.satisfaction_rating
+  }
+
+  const totalRatings = rows.length
+  const avgRating = totalRatings > 0 ? Math.round((sum / totalRatings) * 10) / 10 : null
+
+  return { avgRating, totalRatings, distribution }
+}
+
 // Helper to resolve agent IDs for org-wide queries
 async function resolveAgentIds(
   supabase: Awaited<ReturnType<typeof createAdminClient>>,

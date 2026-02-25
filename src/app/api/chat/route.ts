@@ -2,7 +2,27 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { generateChatResponse } from "@/lib/ai/chat-handler"
 import { generateStreamingChatResponse } from "@/lib/ai/stream-handler"
-import { checkEscalation } from "@/lib/ai/escalation"
+import { checkEscalation, buildEscalationSystemNote } from "@/lib/ai/escalation"
+import { Agent, Vertical } from "@/types/database"
+
+/** Fire-and-forget: notify contacts + dispatch integration event for escalation. */
+function triggerEscalationSideEffects(
+  conversationId: string,
+  reason: string,
+  agentId: string,
+  channel: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const secret = process.env.INTERNAL_API_SECRET
+  fetch(`${baseUrl}/api/internal/handle-escalation`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(secret ? { "x-internal-secret": secret } : {}),
+    },
+    body: JSON.stringify({ conversationId, reason, agentId, channel }),
+  }).catch((err) => console.error("[Chat] Escalation side-effects failed:", err))
+}
 
 const MAX_MESSAGE_LENGTH = 5000
 
@@ -88,17 +108,28 @@ export async function POST(request: NextRequest) {
       .eq("conversation_id", currentConversationId)
       .order("created_at", { ascending: true })
 
+    // Check if the conversation is already escalated (de-duplication)
+    let alreadyEscalated = false
+    if (conversationId) {
+      const { data: existingConv } = await supabase
+        .from("conversations")
+        .select("escalated")
+        .eq("id", conversationId)
+        .single()
+      alreadyEscalated = (existingConv as { escalated: boolean } | null)?.escalated ?? false
+    }
+
     // Check for escalation triggers on user message
-    const agentData = agent as { vertical: string }
-    const escalation = checkEscalation(message, agentData.vertical as import("@/types/database").Vertical)
+    const escalation = checkEscalation(message, (agent as Agent).vertical as Vertical)
+    let escalationNote: string | undefined
+
     if (escalation.shouldEscalate) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from("conversations") as any)
-        .update({
-          escalated: true,
-          escalation_reason: escalation.reason,
-        })
-        .eq("id", currentConversationId)
+      escalationNote = buildEscalationSystemNote(agent as Agent, escalation.reason!)
+
+      if (!alreadyEscalated) {
+        // Fire-and-forget: update DB + notify + dispatch integration event
+        triggerEscalationSideEffects(currentConversationId, escalation.reason!, agentId, "chat")
+      }
     }
 
     // Streaming mode
@@ -108,7 +139,8 @@ export async function POST(request: NextRequest) {
         history || [],
         message,
         currentConversationId,
-        currentVisitorId
+        currentVisitorId,
+        { escalationNote }
       )
 
       return new Response(responseStream, {
@@ -123,7 +155,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Non-streaming mode
-    const response = await generateChatResponse(agent, history || [], message)
+    const response = await generateChatResponse(
+      agent,
+      history || [],
+      message,
+      currentConversationId,
+      currentVisitorId,
+      { escalationNote }
+    )
 
     // Save assistant message
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

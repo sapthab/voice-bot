@@ -4,13 +4,13 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { AudioPlayer } from "@/components/ui/audio-player"
 import {
-  Phone,
   PhoneIncoming,
-  PhoneOff,
   Clock,
   ChevronDown,
   ChevronUp,
+  AlertTriangle,
 } from "lucide-react"
 import { formatRelativeTime } from "@/lib/utils"
 
@@ -25,6 +25,8 @@ interface CallLogEntryProps {
     call_duration: number | null
     call_recording_url: string | null
     call_transcript: string | null
+    escalated?: boolean | null
+    satisfaction_rating?: number | null
     agents: { id: string; name: string; widget_color: string } | null
   }
 }
@@ -79,6 +81,12 @@ export function CallLogEntry({ conversation }: CallLogEntryProps) {
                 >
                   {conversation.call_status || "unknown"}
                 </Badge>
+                {conversation.escalated && (
+                  <Badge variant="destructive" className="text-xs gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Escalated
+                  </Badge>
+                )}
               </div>
               <span className="text-xs text-muted-foreground shrink-0">
                 {formatRelativeTime(conversation.created_at)}
@@ -95,19 +103,16 @@ export function CallLogEntry({ conversation }: CallLogEntryProps) {
                   {formatDuration(conversation.call_duration)}
                 </span>
               )}
+              {conversation.satisfaction_rating && (
+                <Badge variant="outline" className="text-xs">
+                  {"★".repeat(conversation.satisfaction_rating)}
+                </Badge>
+              )}
             </div>
 
             {/* Audio Player */}
             {conversation.call_recording_url && (
-              <div className="mt-2">
-                <audio
-                  controls
-                  className="w-full h-8"
-                  preload="none"
-                >
-                  <source src={conversation.call_recording_url} type="audio/mpeg" />
-                </audio>
-              </div>
+              <AudioPlayer src={conversation.call_recording_url} className="mt-2" />
             )}
 
             {/* Transcript Toggle */}

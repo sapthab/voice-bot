@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       voiceId,
       voiceSpeed,
       voiceLanguage,
+      voiceProvider,
     } = body
 
     if (!name || !vertical) {
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
       ...(voiceId && { voice_id: voiceId }),
       ...(voiceSpeed !== undefined && { voice_speed: voiceSpeed }),
       ...(voiceLanguage && { voice_language: voiceLanguage }),
+      ...(voiceProvider && { voice_provider: voiceProvider }),
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

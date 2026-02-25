@@ -38,7 +38,7 @@ import {
   Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { SUPPORTED_LANGUAGES } from "@/lib/constants/languages"
+import { SUPPORTED_LANGUAGES, isIndianLanguage } from "@/lib/constants/languages"
 import {
   getVoicesForLanguage,
   getDefaultVoiceForLanguage,
@@ -76,6 +76,7 @@ export default function NewAgentPage() {
   const [voiceSpeed, setVoiceSpeed] = useState(1.0)
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([])
   const [uploadingFiles, setUploadingFiles] = useState(false)
+  const [selectedProvider, setSelectedProvider] = useState<"retell" | "bolna">("retell")
 
   const steps: { key: Step; label: string }[] = [
     { key: "vertical", label: "Industry" },
@@ -104,7 +105,10 @@ export default function NewAgentPage() {
 
   const handleLanguageChange = (lang: string) => {
     setSelectedLanguage(lang)
-    const defaultVoice = getDefaultVoiceForLanguage(lang)
+    // Auto-switch provider based on language
+    const newProvider = isIndianLanguage(lang) ? "bolna" : "retell"
+    setSelectedProvider(newProvider)
+    const defaultVoice = getDefaultVoiceForLanguage(lang, newProvider)
     setSelectedVoiceId(defaultVoice.id)
   }
 
@@ -175,6 +179,7 @@ export default function NewAgentPage() {
           voiceId: selectedVoiceId,
           voiceSpeed,
           voiceLanguage: selectedLanguage,
+          voiceProvider: selectedProvider,
         }),
       })
 
@@ -268,8 +273,8 @@ export default function NewAgentPage() {
 
   const widgetUrl = agentId ? `${appUrl}/widget/${agentId}` : ""
 
-  const filteredVoices = getVoicesForLanguage(selectedLanguage)
-  const showNoNativeVoiceWarning = !hasNativeVoice(selectedLanguage)
+  const filteredVoices = getVoicesForLanguage(selectedLanguage, selectedProvider)
+  const showNoNativeVoiceWarning = !hasNativeVoice(selectedLanguage, selectedProvider)
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -443,6 +448,36 @@ export default function NewAgentPage() {
               </Select>
               <p className="text-xs text-muted-foreground">
                 Your agent will respond in this language
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Voice Provider</Label>
+              <Select
+                value={selectedProvider}
+                onValueChange={(value) => {
+                  const prov = value as "retell" | "bolna"
+                  setSelectedProvider(prov)
+                  const defaultVoice = getDefaultVoiceForLanguage(selectedLanguage, prov)
+                  setSelectedVoiceId(defaultVoice.id)
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="retell">
+                    Retell (US/EU)
+                  </SelectItem>
+                  <SelectItem value="bolna">
+                    Bolna (India)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {selectedProvider === "bolna"
+                  ? "Optimized for Indian languages with local telephony"
+                  : "Best for US/EU with ElevenLabs voices"}
               </p>
             </div>
 

@@ -8,5 +8,5 @@
     "strict": true,
     "resolveJsonModule": true
   },
-  "include": ["server.ts"]
+  "include": ["server.ts", "src/lib/voice/tool-definitions.ts"]
 }

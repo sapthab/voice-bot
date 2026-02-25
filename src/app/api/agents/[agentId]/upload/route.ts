@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { processFile } from "@/lib/scraper/file-processor"
-import { chunkText, estimateTokens } from "@/lib/scraper/chunker"
-import { generateEmbedding } from "@/lib/ai/embeddings"
+import { triggerTrainingProcessing } from "@/lib/processing/training-processor"
 import { getAuthenticatedUser, verifyAgentOwnership, unauthorizedResponse, forbiddenResponse } from "@/lib/auth/api-auth"
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -44,6 +43,17 @@ export async function POST(
       )
     }
 
+    // Extract text before returning (we need the buffer from the request)
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const extracted = await processFile(buffer, file.name)
+
+    if (!extracted.text || extracted.text.trim().length === 0) {
+      return NextResponse.json(
+        { error: "No text content could be extracted from this file" },
+        { status: 400 }
+      )
+    }
+
     const adminClient = await createAdminClient()
 
     // Create training source record
@@ -61,99 +71,22 @@ export async function POST(
       return NextResponse.json({ error: "Failed to create training source" }, { status: 500 })
     }
 
-    try {
-      // Extract text from file
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const extracted = await processFile(buffer, file.name)
+    // Fire-and-forget: trigger background processing
+    triggerTrainingProcessing({
+      type: "upload",
+      sourceId: trainingSource.id,
+      agentId,
+      fileName: file.name,
+      extractedText: extracted.text,
+      extractedTitle: extracted.title,
+      sourceType: extracted.metadata.type,
+    })
 
-      if (!extracted.text || extracted.text.trim().length === 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (adminClient.from("training_sources") as any)
-          .update({ status: "failed", error_message: "No text content extracted" })
-          .eq("id", trainingSource.id)
-
-        return NextResponse.json(
-          { error: "No text content could be extracted from this file" },
-          { status: 400 }
-        )
-      }
-
-      // Chunk the extracted text
-      const chunks = chunkText(extracted.text, {
-        title: extracted.title,
-        url: `file://${file.name}`,
-      })
-
-      // Process chunks in batches
-      let chunksCreated = 0
-      const batchSize = 20
-
-      for (let i = 0; i < chunks.length; i += batchSize) {
-        const batch = chunks.slice(i, i + batchSize)
-        const insertData = []
-
-        for (const chunk of batch) {
-          const embedding = await generateEmbedding(chunk.content)
-          insertData.push({
-            agent_id: agentId,
-            training_source_id: trainingSource.id,
-            content: chunk.content,
-            metadata: {
-              ...chunk.metadata,
-              source_type: extracted.metadata.type,
-              filename: file.name,
-            },
-            embedding,
-            token_count: estimateTokens(chunk.content),
-          })
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: insertError } = await (adminClient.from("document_chunks") as any)
-          .insert(insertData)
-
-        if (insertError) {
-          console.error("Error inserting chunks:", insertError)
-        } else {
-          chunksCreated += insertData.length
-        }
-      }
-
-      // Update training source status
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (adminClient.from("training_sources") as any)
-        .update({
-          status: "completed",
-          pages_found: 1,
-          pages_scraped: 1,
-          last_scraped_at: new Date().toISOString(),
-        })
-        .eq("id", trainingSource.id)
-
-      // Mark agent as trained
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (adminClient.from("agents") as any)
-        .update({ is_trained: true })
-        .eq("id", agentId)
-
-      return NextResponse.json({
-        success: true,
-        filename: file.name,
-        chunksCreated,
-        trainingSourceId: trainingSource.id,
-      })
-    } catch (processError) {
-      // Update training source as failed
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (adminClient.from("training_sources") as any)
-        .update({
-          status: "failed",
-          error_message: processError instanceof Error ? processError.message : "Processing failed",
-        })
-        .eq("id", trainingSource.id)
-
-      throw processError
-    }
+    return NextResponse.json({
+      sourceId: trainingSource.id,
+      status: "processing",
+      filename: file.name,
+    })
   } catch (error) {
     console.error("File upload error:", error)
     return NextResponse.json(

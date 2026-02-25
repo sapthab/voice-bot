@@ -8,6 +8,7 @@ import { TopicsBreakdown } from "@/components/analytics/TopicsBreakdown"
 import { SentimentTrend } from "@/components/analytics/SentimentTrend"
 import { KnowledgeGaps } from "@/components/analytics/KnowledgeGaps"
 import { PerformanceMetrics } from "@/components/analytics/PerformanceMetrics"
+import { SatisfactionRatings } from "@/components/analytics/SatisfactionRatings"
 
 interface AnalyticsPageProps {
   searchParams: Promise<{
@@ -72,6 +73,10 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
       <div className="grid gap-6 lg:grid-cols-2">
         <SentimentTrend agentId={agentId} from={from} to={to} />
         <PerformanceMetrics agentId={agentId} from={from} to={to} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SatisfactionRatings agentId={agentId} from={from} to={to} />
       </div>
 
       <KnowledgeGaps agentId={agentId} from={from} to={to} />

@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/process-followups",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/internal/retry-webhooks",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/internal/retry-processing",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/internal/aggregate-analytics",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

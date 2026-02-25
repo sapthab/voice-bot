@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     // Get agent voice details
     const { data: agent, error } = await supabase
       .from("agents")
-      .select("voice_enabled, phone_number, retell_agent_id, voice_id, voice_language, voice_speed, voice_welcome_message")
+      .select("voice_enabled, phone_number, retell_agent_id, bolna_agent_id, voice_id, voice_language, voice_speed, voice_welcome_message, voice_provider")
       .eq("id", agentId)
       .single()
 

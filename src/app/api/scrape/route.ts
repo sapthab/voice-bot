@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
-import { scrapeWebsite, simpleScrape } from "@/lib/scraper/firecrawl"
-import { chunkText, estimateTokens } from "@/lib/scraper/chunker"
-import { generateEmbedding } from "@/lib/ai/embeddings"
+import { triggerTrainingProcessing } from "@/lib/processing/training-processor"
 import { getAuthenticatedUser, verifyAgentOwnership, unauthorizedResponse, forbiddenResponse } from "@/lib/auth/api-auth"
 
 /** Validate that the URL is HTTPS and not a private/loopback address */
@@ -68,6 +66,27 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createAdminClient()
 
+    // --- Chunk cleanup: delete old source & chunks for same (agent_id, url) ---
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existingSources } = await (supabase.from("training_sources") as any)
+      .select("id")
+      .eq("agent_id", agentId)
+      .eq("url", url)
+
+    if (existingSources && existingSources.length > 0) {
+      const oldIds = existingSources.map((s: { id: string }) => s.id)
+      // Delete chunks belonging to old sources
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("document_chunks") as any)
+        .delete()
+        .in("training_source_id", oldIds)
+      // Delete the old training source records
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("training_sources") as any)
+        .delete()
+        .in("id", oldIds)
+    }
+
     // Create training source record
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: source, error: sourceError } = await (supabase.from("training_sources") as any)
@@ -87,134 +106,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Scrape the website
-    let pages
-    try {
-      if (process.env.FIRECRAWL_API_KEY) {
-        pages = await scrapeWebsite(url)
-      } else {
-        // Fallback to simple scraper
-        pages = await simpleScrape(url)
-      }
-    } catch (scrapeError) {
-      console.error("Scraping error:", scrapeError)
-
-      // Update source status to failed
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from("training_sources") as any)
-        .update({
-          status: "failed",
-          error_message: scrapeError instanceof Error ? scrapeError.message : "Unknown error",
-        })
-        .eq("id", source.id)
-
-      return NextResponse.json(
-        { error: "Failed to scrape website" },
-        { status: 500 }
-      )
-    }
-
-    if (!pages || pages.length === 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from("training_sources") as any)
-        .update({
-          status: "failed",
-          error_message: "No content found on website",
-        })
-        .eq("id", source.id)
-
-      return NextResponse.json(
-        { error: "No content found" },
-        { status: 400 }
-      )
-    }
-
-    // Update pages found
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from("training_sources") as any)
-      .update({
-        pages_found: pages.length,
-      })
-      .eq("id", source.id)
-
-    // Process each page
-    let pagesScraped = 0
-    const chunks: {
-      agent_id: string
-      training_source_id: string
-      content: string
-      metadata: Record<string, unknown>
-      embedding: number[]
-      token_count: number
-    }[] = []
-
-    for (const page of pages) {
-      if (!page.content || page.content.trim().length < 50) {
-        continue
-      }
-
-      // Chunk the content
-      const pageChunks = chunkText(page.content, {
-        url: page.url,
-        title: page.title,
-      })
-
-      // Generate embeddings for each chunk
-      for (const chunk of pageChunks) {
-        try {
-          const embedding = await generateEmbedding(chunk.content)
-
-          chunks.push({
-            agent_id: agentId,
-            training_source_id: source.id,
-            content: chunk.content,
-            metadata: chunk.metadata,
-            embedding,
-            token_count: estimateTokens(chunk.content),
-          })
-        } catch (embeddingError) {
-          console.error("Embedding error:", embeddingError)
-          // Continue with other chunks
-        }
-      }
-
-      pagesScraped++
-    }
-
-    // Insert chunks in batches
-    const BATCH_SIZE = 100
-    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
-      const batch = chunks.slice(i, i + BATCH_SIZE)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: insertError } = await (supabase.from("document_chunks") as any)
-        .insert(batch)
-
-      if (insertError) {
-        console.error("Error inserting chunks:", insertError)
-      }
-    }
-
-    // Update training source status
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from("training_sources") as any)
-      .update({
-        status: "completed",
-        pages_scraped: pagesScraped,
-        last_scraped_at: new Date().toISOString(),
-      })
-      .eq("id", source.id)
-
-    // Mark agent as trained
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from("agents") as any)
-      .update({ is_trained: true })
-      .eq("id", agentId)
+    // Fire-and-forget: trigger background processing
+    triggerTrainingProcessing({
+      type: "scrape",
+      sourceId: source.id,
+      agentId,
+      url,
+    })
 
     return NextResponse.json({
-      success: true,
-      pagesFound: pages.length,
-      pagesScraped,
-      chunksCreated: chunks.length,
+      sourceId: source.id,
+      status: "processing",
     })
   } catch (error) {
     console.error("Scrape API error:", error)

@@ -2,7 +2,27 @@ import { createAdminClient } from "@/lib/supabase/server"
 import { retrieveContext, buildContextPrompt } from "@/lib/ai/rag"
 import { buildVoiceSystemPrompt } from "@/lib/ai/prompt-builder"
 import { getOpenAIClient } from "@/lib/ai/openai"
-import { Agent } from "@/types/database"
+import { checkEscalation, buildEscalationSystemNote } from "@/lib/ai/escalation"
+import { Agent, Vertical } from "@/types/database"
+import { VoiceProviderType } from "./types"
+
+function triggerEscalationSideEffects(
+  conversationId: string,
+  reason: string,
+  agentId: string,
+  channel: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const secret = process.env.INTERNAL_API_SECRET
+  fetch(`${baseUrl}/api/internal/handle-escalation`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(secret ? { "x-internal-secret": secret } : {}),
+    },
+    body: JSON.stringify({ conversationId, reason, agentId, channel }),
+  }).catch((err) => console.error("[Voice] Escalation side-effects failed:", err))
+}
 
 const VOICE_MODEL = "gpt-4o-mini"
 
@@ -32,6 +52,34 @@ export async function getAgentByRetellId(retellAgentId: string): Promise<Agent |
 
   if (error || !data) return null
   return data as Agent
+}
+
+export async function getAgentByBolnaId(bolnaAgentId: string): Promise<Agent | null> {
+  const supabase = await createAdminClient()
+
+  const { data, error } = await supabase
+    .from("agents")
+    .select("*")
+    .eq("bolna_agent_id", bolnaAgentId)
+    .eq("is_active", true)
+    .single()
+
+  if (error || !data) return null
+  return data as Agent
+}
+
+export async function getAgentByProviderId(
+  providerType: VoiceProviderType,
+  providerAgentId: string
+): Promise<Agent | null> {
+  switch (providerType) {
+    case "retell":
+      return getAgentByRetellId(providerAgentId)
+    case "bolna":
+      return getAgentByBolnaId(providerAgentId)
+    default:
+      return null
+  }
 }
 
 export async function handleCallStart(
@@ -96,12 +144,24 @@ export async function handleCallResponse(
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true })
 
+  // Check for escalation (de-dup via handle-escalation endpoint)
+  const escalation = checkEscalation(userTranscript, agent.vertical as Vertical)
+  let escalationNote: string | undefined
+
+  if (escalation.shouldEscalate) {
+    escalationNote = buildEscalationSystemNote(agent, escalation.reason!, "voice")
+    triggerEscalationSideEffects(conversationId, escalation.reason!, agent.id, "voice")
+  }
+
   // Retrieve RAG context
-  const context = await retrieveContext(userTranscript, agent.id)
+  const context = await retrieveContext(userTranscript, agent.id, {
+    docThreshold: agent.doc_similarity_threshold,
+    faqThreshold: agent.faq_similarity_threshold,
+  })
   const contextPrompt = buildContextPrompt(context)
 
   // Build voice system prompt
-  const systemPrompt = buildVoiceSystemPrompt(agent, { ragContext: contextPrompt })
+  const systemPrompt = buildVoiceSystemPrompt(agent, { ragContext: contextPrompt, escalationNote })
 
   // Build messages for GPT
   const messages: { role: "system" | "user" | "assistant"; content: string }[] = [

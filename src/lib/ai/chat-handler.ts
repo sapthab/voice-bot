@@ -24,16 +24,20 @@ export async function generateChatResponse(
   conversationHistory: Message[],
   userMessage: string,
   conversationId?: string,
-  visitorId?: string
+  visitorId?: string,
+  options?: { escalationNote?: string }
 ): Promise<string> {
   const openai = getOpenAIClient()
 
   // Retrieve relevant context
-  const context = await retrieveContext(userMessage, agent.id)
+  const context = await retrieveContext(userMessage, agent.id, {
+    docThreshold: agent.doc_similarity_threshold,
+    faqThreshold: agent.faq_similarity_threshold,
+  })
   const contextPrompt = buildContextPrompt(context)
 
   // Build system prompt using the prompt builder
-  const systemPrompt = buildChatSystemPrompt(agent, { ragContext: contextPrompt })
+  const systemPrompt = buildChatSystemPrompt(agent, { ragContext: contextPrompt, escalationNote: options?.escalationNote })
 
   // Build messages array
   const messages: ChatMessage[] = [{ role: "system", content: systemPrompt }]
